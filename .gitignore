@@ -1,0 +1,8 @@
+sftp-config.json
+*.gz
+*.aux
+*.out
+*.log
+*.o
+perf*
+merge_sort
