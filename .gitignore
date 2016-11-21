@@ -6,3 +6,4 @@ sftp-config.json
 *.o
 perf*
 merge_sort
+*.txt

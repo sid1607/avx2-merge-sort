@@ -11,6 +11,11 @@ typedef struct masks {
 
 extern masks global_masks;
 
+void sort64(__m256i* row);
+
+void sort64(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
+            __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7);
+
 __m256i load_reg256(int *a);
 
 void store_reg256(int *a, __m256i& b);
@@ -36,7 +41,7 @@ __m256i intra_register_sort(__m256i& l8);
 
 void initialize();
 
-void test_sort_column();
+void test_sort64();
 
 void merge_phase(int *a, int *b, int *out, int merge_size);
 

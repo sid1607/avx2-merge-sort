@@ -55,34 +55,75 @@ std::pair<__m256i, __m256i> bitonic_merge(__m256i& a, __m256i& b) {
     intra_register_sort(maxabr));
 }
 
-void sort_columns(__m256i& a0, __m256i& a1, __m256i& a2, __m256i& a3,
-                  __m256i& a4, __m256i& a5, __m256i& a6, __m256i& a7) {
+inline void transpose8(__m256* row0, __m256* row1, __m256* row2, __m256* row3,
+                       __m256* row4, __m256* row5, __m256* row6, __m256* row7) {
+  __m256 __t0, __t1, __t2, __t3, __t4, __t5, __t6, __t7;
+  __m256 __tt0, __tt1, __tt2, __tt3, __tt4, __tt5, __tt6, __tt7;
+  __t0 = _mm256_unpacklo_ps(*row0, *row1);
+  __t1 = _mm256_unpackhi_ps(*row0, *row1);
+  __t2 = _mm256_unpacklo_ps(*row2, *row3);
+  __t3 = _mm256_unpackhi_ps(*row2, *row3);
+  __t4 = _mm256_unpacklo_ps(*row4, *row5);
+  __t5 = _mm256_unpackhi_ps(*row4, *row5);
+  __t6 = _mm256_unpacklo_ps(*row6, *row7);
+  __t7 = _mm256_unpackhi_ps(*row6, *row7);
+  __tt0 = _mm256_shuffle_ps(__t0,__t2,_MM_SHUFFLE(1,0,1,0));
+  __tt1 = _mm256_shuffle_ps(__t0,__t2,_MM_SHUFFLE(3,2,3,2));
+  __tt2 = _mm256_shuffle_ps(__t1,__t3,_MM_SHUFFLE(1,0,1,0));
+  __tt3 = _mm256_shuffle_ps(__t1,__t3,_MM_SHUFFLE(3,2,3,2));
+  __tt4 = _mm256_shuffle_ps(__t4,__t6,_MM_SHUFFLE(1,0,1,0));
+  __tt5 = _mm256_shuffle_ps(__t4,__t6,_MM_SHUFFLE(3,2,3,2));
+  __tt6 = _mm256_shuffle_ps(__t5,__t7,_MM_SHUFFLE(1,0,1,0));
+  __tt7 = _mm256_shuffle_ps(__t5,__t7,_MM_SHUFFLE(3,2,3,2));
+  *row0 = _mm256_permute2f128_ps(__tt0, __tt4, 0x20);
+  *row1 = _mm256_permute2f128_ps(__tt1, __tt5, 0x20);
+  *row2 = _mm256_permute2f128_ps(__tt2, __tt6, 0x20);
+  *row3 = _mm256_permute2f128_ps(__tt3, __tt7, 0x20);
+  *row4 = _mm256_permute2f128_ps(__tt0, __tt4, 0x31);
+  *row5 = _mm256_permute2f128_ps(__tt1, __tt5, 0x31);
+  *row6 = _mm256_permute2f128_ps(__tt2, __tt6, 0x31);
+  *row7 = _mm256_permute2f128_ps(__tt3, __tt7, 0x31);
+}
 
-    minmax(a0,a1);
-    minmax(a2,a3);
-    minmax(a4,a5);
-    minmax(a6,a7);
+void sort_columns(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
+                  __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7) {
 
-    minmax(a0,a2);
-    minmax(a1,a3);
-    minmax(a4,a6);
-    minmax(a5,a7);
+    minmax(row0,row1);
+    minmax(row2,row3);
+    minmax(row4,row5);
+    minmax(row6,row7);
 
-    minmax(a1,a2);
-    minmax(a0,a4);
-    minmax(a5,a6);
-    minmax(a3,a7);
+    minmax(row0,row2);
+    minmax(row1,row3);
+    minmax(row4,row6);
+    minmax(row5,row7);
 
-    minmax(a1,a5);
-    minmax(a2,a6);
+    minmax(row1,row2);
+    minmax(row0,row4);
+    minmax(row5,row6);
+    minmax(row3,row7);
 
-    minmax(a1,a4);
-    minmax(a3,a6);
+    minmax(row1,row5);
+    minmax(row2,row6);
 
-    minmax(a2,a4);
-    minmax(a3,a5);
+    minmax(row1,row4);
+    minmax(row3,row6);
 
-    minmax(a3,a4);
+    minmax(row2,row4);
+    minmax(row3,row5);
+
+    minmax(row3,row4);
+}
+
+inline void sort64(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
+                   __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7) {
+  sort_columns(row0, row1, row2, row3, row4, row5, row6, row7);
+  transpose8((__m256 *)&row0, (__m256 *)&row1, (__m256 *)&row2, (__m256 *)&row3,
+             (__m256 *)&row4, (__m256 *)&row5, (__m256 *)&row6, (__m256 *)&row7);
+}
+
+inline void sort64(__m256i* row) {
+  sort64(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]);
 }
 
 __m256i intra_register_sort(__m256i& l8) {
@@ -141,4 +182,45 @@ void test_basic() {
   minmax(test1, test2, min, max);
   print_test_array(min, "Minimum");
   print_test_array(max, "Maximum");
+}
+
+inline void generate_random(int *a) {
+  for (int i=0; i<8; i++) {
+    a[i] = (rand()%200);
+  }
+}
+
+void test_sort64() {
+  int a[8][8];
+  __m256i row[8];
+
+  for(int i = 0; i< 8; i++) {
+    generate_random(a[i]);
+    row[i] =  _mm256_load_si256((__m256i *) &(a[i][0]));
+  }
+
+  sort64(row);
+
+  bool succeed = true;
+  for(int i = 0; i<8; i++){
+    for(int j = 1; j<8; j++) {
+      if(((int *) &row[i])[j] < ((int *) &row[i])[j-1]){
+        succeed = false;
+        break;
+      }
+    }
+  }
+
+  if(!succeed){
+    std::cout << "Sort64 test failed\n";
+    for(int i = 0; i<8; i++){
+      for(int j = 1; j<8; j++) {
+        std::cout << ((int *) &row[i])[j] << " ";
+      }
+      std::cout <<std::endl;
+    }
+  } else {
+    std::cout << "Sort64 test pass\n";
+  }
+
 }

@@ -137,7 +137,7 @@ bool test_merge_phase() {
 }
 
 int main() {
-  // test_sort_column();
+  test_sort64();
   int num_iters = 100000;
   srand(time(NULL));
   initialize();
