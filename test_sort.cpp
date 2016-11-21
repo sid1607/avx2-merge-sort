@@ -1,5 +1,6 @@
 #include <time.h>
 #include <iostream>
+#include <chrono>
 #include "merge_sort.h"
 
 void print_array(int *a, const std::string& msg, int size=8) {
@@ -224,9 +225,7 @@ bool test_merge_pass(int array_size, int merge_size) {
 }
 
 void generate_reference(int *a, int *ref, int len) {
-  for (int i=0; i<len; i++) {
-    ref[i] = a[i];
-  }
+  std::copy(a, a+len, ref);
   qsort(ref, len, sizeof(int), compare);
 }
 
@@ -246,13 +245,22 @@ bool test_merge(int len) {
   return status;
 }
 
+inline double get_time() {
+  return 
+    static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(
+      std::chrono::steady_clock::now().time_since_epoch()).count())/1000;
+}
+
 bool test_merge_sort(int len) {
   bool status = true;
   std::vector<int> a(len), temp(len), ref(len);
   generate_random_array(&a[0], len);
   // print_array(&a[0], "A", len);
+  auto std_start = get_time();
   generate_reference(&a[0], &ref[0], len);
+  auto std_end = get_time();
   auto res = merge_sort(a,temp);
+  auto merge_end = get_time();
   // print_array(&res.first[0], "Out", len);
   if (is_sorted_array(&res.first[0], &ref[0], len) == false) {
       print_array(&ref[0], "Ref", len);
@@ -260,19 +268,24 @@ bool test_merge_sort(int len) {
       status = false;
   } else {
     status = true;
+    std::cout << "std time:" << std_end-std_start << " Merge time:" 
+      << merge_end - std_end << std::endl;
   }
   return status;
 }
 
 int main() {
-  int num_iters = 100;
+  int num_iters = 1;
+  int start = 262144, end = 262144;
   srand(time(NULL));
   initialize();
 
-  for (int i=0; i<num_iters; i++) {
-    if(!test_merge_sort(64))
-      return 1;
+  for(int i=start; i<=end;i++) {
+    for (int j=0; j<num_iters; j++) {
+      if(!test_merge_sort(i))
+        return 1;
+    }
+    std::cout << "Passed:(" << i << "," << num_iters << ")" << std::endl;
   }
-  std::cout << "Passed:" << num_iters << std::endl;
   return 0;
 }

@@ -1,5 +1,5 @@
 CXX=g++ -m64 -std=c++0x
-CXXFLAGS=-g -Wall
+CXXFLAGS=-O3 -Wall
 AVXFLAGS=-mavx2
 
 all:

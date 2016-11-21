@@ -2,8 +2,8 @@
 #include <iostream>
 #include <algorithm>
 #include <cstring>
-
-// add sort phase
+#include <climits>
+#include <cassert>
 
 // the two input arrays are a[start, mid] and a[mid+1, end]
 void merge_phase(int *a, int *out, int start, int mid, int end) {
@@ -122,7 +122,20 @@ std::pair<std::vector<int>, std::vector<int>>
 std::pair<std::vector<int>, std::vector<int>> 
   merge_sort(std::vector<int>& a, std::vector<int>& b) {
     __m256i rows[SIMD_SIZE];
+  if (a.size()%64!=0) {
     // add padding
+    auto i = a.size();
+    auto end = (i+64/64)*64;
+    while (i<end) {
+      a.push_back(INT_MAX);
+      i++;
+    }
+    // adjust b's size as well
+    b.resize(a.size());
+  }
+
+  assert(a.size()%64 == 0);
+  assert(b.size() == a.size());
 
   for (size_t i=0; i < a.size(); i+=SORT_SIZE) {
     for (int j=0; j<SORT_SIZE/SIMD_SIZE; j++) {
