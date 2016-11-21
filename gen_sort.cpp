@@ -17,6 +17,18 @@ void merge_phase(int *a, int *out, int start, int mid, int end) {
   i += SIMD_SIZE;
   j += SIMD_SIZE;
 
+  // 8-by-8 merge
+  if (mid-start+1 == SIMD_SIZE) {
+    auto result = bitonic_merge(ra, rb);
+    // save the smaller half
+    store_reg256(&out[k], result.first);
+    k += SIMD_SIZE;
+    // then save the larger half
+    store_reg256(&out[k], result.second);
+    k += SIMD_SIZE;
+    return;
+  }
+
   do {
     auto result = bitonic_merge(ra, rb);
     
@@ -85,22 +97,42 @@ void merge_pass(int *in, int *out, int n, int merge_size) {
 }
 
 // assume first sort phase has finished
-int* merge(int *a, int *b, int len) {
+std::pair<std::vector<int>, std::vector<int>> 
+    merge(std::vector<int>& a, std::vector<int>& b) {
   int i=0;
+  size_t len = a.size();
   /*
    * even iterations: a->b
    * odd iterations: b->a
    */
   // start from 16-16 merge
-  for (int pass_size=16; pass_size<len; pass_size*=2, i++) {
+  for (size_t pass_size=SIMD_SIZE; pass_size<len; pass_size*=2, i++) {
     if (i%2 == 0) {
-      merge_pass(a, b, len, pass_size);
+      merge_pass(&a[0], &b[0], len, pass_size);
     } else {
-      merge_pass(b, a, len, pass_size);
+      merge_pass(&b[0], &a[0], len, pass_size);
     }
   }
 
   if (i%2 == 0)
-    return a;
-  return b;
+    return std::make_pair(a,b);
+  return std::make_pair(b,a);
+}
+
+std::pair<std::vector<int>, std::vector<int>> 
+  merge_sort(std::vector<int>& a, std::vector<int>& b) {
+    __m256i rows[SIMD_SIZE];
+    // add padding
+
+  for (size_t i=0; i < a.size(); i+=SORT_SIZE) {
+    for (int j=0; j<SORT_SIZE/SIMD_SIZE; j++) {
+      rows[j] = load_reg256(&a[i+j*SIMD_SIZE]);
+    }
+    sort64(rows);
+    for (int j=0; j<SORT_SIZE/SIMD_SIZE; j++) {
+      store_reg256(&a[i+j*SIMD_SIZE], rows[j]);
+    }
+  }
+
+  return merge(a, b);
 }

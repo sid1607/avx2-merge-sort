@@ -1,8 +1,10 @@
 #include <immintrin.h> 
 #include <utility>
 #include <string>
+#include <vector>
 
 #define SIMD_SIZE 8
+#define SORT_SIZE 64
 
 typedef struct masks {
   __m256i load_store_mask;
@@ -46,4 +48,8 @@ void merge_phase(int *a, int *out, int start, int mid, int end);
 
 void merge_pass(int *in, int *out, int n, int merge_size);
 
-int* merge(int *a, int *b, int len);
+std::pair<std::vector<int>, std::vector<int>> 
+    merge(std::vector<int>& a, std::vector<int>& b);
+
+std::pair<std::vector<int>, std::vector<int>>
+    merge_sort(std::vector<int>& a, std::vector<int>& b);

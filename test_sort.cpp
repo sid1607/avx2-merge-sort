@@ -232,35 +232,46 @@ void generate_reference(int *a, int *ref, int len) {
 
 bool test_merge(int len) {
   bool status;
-  int *a = new int[len];
-  int *temp = new int[len];
-  int *ref = new int[len];
-  create_merge_array(a, len, 16);
-  generate_reference(a, ref, len);
-  int *res = merge(a, temp, len);
-  if (is_sorted_array(res, ref, len) == false) {
-    print_array(ref, "Ref", len);
-    print_array(res, "Out", len);
+  std::vector<int> a(len), temp(len), ref(len);
+  create_merge_array(&a[0], len, 16);
+  generate_reference(&a[0], &ref[0], len);
+  auto res = merge(a, temp);
+  if (is_sorted_array(&res.first[0], &ref[0], len) == false) {
+    print_array(&ref[0], "Ref", len);
+    print_array(&res.first[0], "Out", len);
     status = false;
   } else {
     status = true;
   }
-  delete[] a;
-  delete[] temp;
+  return status;
+}
+
+bool test_merge_sort(int len) {
+  bool status = true;
+  std::vector<int> a(len), temp(len), ref(len);
+  generate_random_array(&a[0], len);
+  // print_array(&a[0], "A", len);
+  generate_reference(&a[0], &ref[0], len);
+  auto res = merge_sort(a,temp);
+  // print_array(&res.first[0], "Out", len);
+  if (is_sorted_array(&res.first[0], &ref[0], len) == false) {
+      print_array(&ref[0], "Ref", len);
+      print_array(&res.first[0], "Out", len);
+      status = false;
+  } else {
+    status = true;
+  }
   return status;
 }
 
 int main() {
-  // test_sort_column();
-  int num_iters = 1000;
+  int num_iters = 100;
   srand(time(NULL));
   initialize();
 
   for (int i=0; i<num_iters; i++) {
-    if (!test_sort64())
+    if(!test_merge_sort(64))
       return 1;
-    // if (!test_merge(1712))
-    //   return 1;
   }
   std::cout << "Passed:" << num_iters << std::endl;
   return 0;
