@@ -1,5 +1,6 @@
 #include <immintrin.h> 
 #include <utility>
+#include <string>
 
 #define SIMD_SIZE 8
 
@@ -46,3 +47,5 @@ void test_sort64();
 void merge_phase(int *a, int *out, int start, int mid, int end);
 
 void merge_pass(int *in, int *out, int n, int merge_size);
+
+int* merge(int *a, int *b, int len);

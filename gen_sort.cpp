@@ -1,14 +1,15 @@
 #include "merge_sort.h"
 #include <iostream>
 #include <algorithm>
+#include <cstring>
 
 // add sort phase
 
 // the two input arrays are a[start, mid] and a[mid+1, end]
 void merge_phase(int *a, int *out, int start, int mid, int end) {
-  int i=0, j=mid+1, k=0;
-  int i_end = mid - start + 1;
-  int j_end = end - mid + i_end;
+  int i=start, j=mid+1, k=start;
+  int i_end = i + mid - start + 1;
+  int j_end = j + end - mid;
 
   auto ra = load_reg256(&a[i]);
   auto rb = load_reg256(&a[j]);
@@ -72,12 +73,34 @@ void merge_pass(int *in, int *out, int n, int merge_size) {
   for (int i=0; i < n-1; i+=2*merge_size) {
     auto mid = i + merge_size - 1;
     auto end = std::min(i+2*merge_size-1, n-1);
-    // merge two merge_size arrays per iteration
-    merge_phase(in+i, out+i, i, mid, end);
+    // check if there are 2 sub-arrays to merge
+    if (mid < end) {
+      // merge two merge_size arrays per iteration
+      merge_phase(in, out, i, mid, end);
+    } else {
+      // copy the leftover data to output
+      std::memcpy(out+i, in+i, (n-i)*sizeof(int));
+    }
   }
 }
 
 // assume first sort phase has finished
-void merge(int *a, int *out) {
+int* merge(int *a, int *b, int len) {
+  int i=0;
+  /*
+   * even iterations: a->b
+   * odd iterations: b->a
+   */
+  // start from 16-16 merge
+  for (int pass_size=16; pass_size<len; pass_size*=2, i++) {
+    if (i%2 == 0) {
+      merge_pass(a, b, len, pass_size);
+    } else {
+      merge_pass(b, a, len, pass_size);
+    }
+  }
 
+  if (i%2 == 0)
+    return a;
+  return b;
 }

@@ -1,5 +1,4 @@
 #include <time.h>
-#include <stdlib.h>
 #include <iostream>
 #include "merge_sort.h"
 
@@ -39,11 +38,17 @@ void test_sort() {
 }
 
 // generate a random array of sorted elements
-void generate_random_array(int *a, int size=8) {
+void generate_random_sorted_array(int *a, int size=8) {
   for (int i=0; i<size; i++) {
     a[i] = get_rand_1000();
   }
   qsort(a, size, sizeof(int), compare);
+}
+
+void generate_random_array(int *a, int size) {
+  for(int i=0; i<size; i++) {
+    a[i] = get_rand_1000();
+  }
 }
 
 bool is_sorted_register(__m256i a, int *prev) {
@@ -73,8 +78,8 @@ bool check_bitonic_result(int *a, int *b,
 
 bool test_bitonic_merge() {
   int a[8], b[8];
-  generate_random_array(a);
-  generate_random_array(b);
+  generate_random_sorted_array(a);
+  generate_random_sorted_array(b);
   auto ymm0 = load_reg256(&a[0]);
   auto ymm1 = load_reg256(&b[0]);
   auto result = bitonic_merge(ymm0, ymm1);
@@ -83,14 +88,14 @@ bool test_bitonic_merge() {
 
 void test_sort_column() {
   int a[8], b[8], c[8], d[8], e[8], f[8], g[8], h[8];
-  generate_random_array(a);
-  generate_random_array(b);
-  generate_random_array(c);
-  generate_random_array(d);
-  generate_random_array(e);
-  generate_random_array(f);
-  generate_random_array(g);
-  generate_random_array(h);
+  generate_random_sorted_array(a);
+  generate_random_sorted_array(b);
+  generate_random_sorted_array(c);
+  generate_random_sorted_array(d);
+  generate_random_sorted_array(e);
+  generate_random_sorted_array(f);
+  generate_random_sorted_array(g);
+  generate_random_sorted_array(h);
   __m256i y0 = load_reg256(&a[0]);
   __m256i y1 = load_reg256(&b[0]);
   __m256i y2 = load_reg256(&c[0]);
@@ -123,10 +128,22 @@ bool is_sorted_array(int *out, int len) {
   return true;
 }
 
+bool is_sorted_array(int *out, int *ref, int len) {
+  int prev = out[0];
+  for (int i=0; i<len; i++) {
+    if (out[i] < prev)
+      return false;
+    if (out[i] != ref[i])
+      return false;
+    prev = out[i];
+  }
+  return true;
+}
+
 void create_merge_array(int *a, int array_size, int merge_size) {
   // created sorted runs of 8 elements
   for (int i=0; i<array_size; i+=merge_size) {
-    generate_random_array(&a[i], merge_size);
+    generate_random_sorted_array(&a[i], merge_size);
   }
 }
 
@@ -147,8 +164,6 @@ bool test_merge_phase(int size) {
   return status;
 }
 
-
-
 bool test_merge_pass(int array_size, int merge_size) {
   bool status;
   int *a = new int[array_size];
@@ -157,6 +172,8 @@ bool test_merge_pass(int array_size, int merge_size) {
   print_array(a, "A", array_size);
 
   merge_pass(a, out, array_size, merge_size);
+    print_array(out, "Out", array_size);
+
 
   if (is_sorted_array(out, array_size) == false) {
     std::cout << "sorted" << std::endl;
@@ -172,20 +189,42 @@ bool test_merge_pass(int array_size, int merge_size) {
   return status;
 }
 
+void generate_reference(int *a, int *ref, int len) {
+  for (int i=0; i<len; i++) {
+    ref[i] = a[i];
+  }
+  qsort(ref, len, sizeof(int), compare);
+}
+
+bool test_merge(int len) {
+  bool status;
+  int *a = new int[len];
+  int *temp = new int[len];
+  int *ref = new int[len];
+  create_merge_array(a, len, 16);
+  generate_reference(a, ref, len);
+  int *res = merge(a, temp, len);
+  if (is_sorted_array(res, ref, len) == false) {
+    print_array(ref, "Ref", len);
+    print_array(res, "Out", len);
+    status = false;
+  } else {
+    status = true;
+  }
+  delete[] a;
+  delete[] temp;
+  return status;
+}
+
 int main() {
   // test_sort_column();
-  int num_iters = 10000;
+  int num_iters = 1000;
   srand(time(NULL));
   initialize();
 
-  // test_merge_phase(16);
   for (int i=0; i<num_iters; i++) {
-    if (!test_bitonic_merge())
+    if (!test_merge(1712))
       return 1;
-    if (!test_merge_phase(32))
-      return 1;
-    // if (!test_merge_pass(48, 16))
-    //   return 1;
   }
   std::cout << "Passed:" << num_iters << std::endl;
   return 0;
