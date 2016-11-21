@@ -118,6 +118,40 @@ void test_sort_column() {
   }
 }
 
+bool test_sort64() {
+  int a[8][8];
+  __m256i row[8];
+
+  for(int i = 0; i< 8; i++) {
+    generate_random_array(a[i], 8);
+    row[i] =  load_reg256(&(a[i][0]));
+  }
+
+  sort64(row);
+
+  bool succeed = true;
+  for(int i = 0; i<8; i++){
+    for(int j = 1; j<8; j++) {
+      if(((int *) &row[i])[j] < ((int *) &row[i])[j-1]){
+        succeed = false;
+        break;
+      }
+    }
+  }
+
+  if(!succeed){
+    std::cout << "Sort64 test failed\n";
+    for(int i = 0; i<8; i++){
+      for(int j = 1; j<8; j++) {
+        std::cout << ((int *) &row[i])[j] << " ";
+      }
+      std::cout <<std::endl;
+    }
+  }
+
+  return succeed;
+}
+
 bool is_sorted_array(int *out, int len) {
   int prev = out[0];
   for (int i=1; i<len; i++) {
@@ -223,8 +257,10 @@ int main() {
   initialize();
 
   for (int i=0; i<num_iters; i++) {
-    if (!test_merge(1712))
+    if (!test_sort64())
       return 1;
+    // if (!test_merge(1712))
+    //   return 1;
   }
   std::cout << "Passed:" << num_iters << std::endl;
   return 0;

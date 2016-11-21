@@ -122,7 +122,7 @@ inline void sort64(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
              (__m256 *)&row4, (__m256 *)&row5, (__m256 *)&row6, (__m256 *)&row7);
 }
 
-inline void sort64(__m256i* row) {
+void sort64(__m256i* row) {
   sort64(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]);
 }
 
@@ -144,13 +144,6 @@ __m256i intra_register_sort(__m256i& l8) {
   return _mm256_unpacklo_epi32(min, max);
 }
 
-void print_test_array(__m256i res, const std::string& msg) {
-  std::cout << msg << std::endl;
-  for (int i=0; i<8; i++)
-    std::cout << ((int *)&res)[i] << "\t";
-  std::cout << std::endl;
-}
-
 void initialize() {
   // directly set load store mask in 32B aligned memory
   alignas(32) int load_store_mask[8] = 
@@ -163,6 +156,13 @@ void initialize() {
   int swap_128[8] = {4,5,6,7,0,1,2,3};
   global_masks.rev_idx_mask = load_reg256(&rev_idx_mask[0]);
   global_masks.swap_128 = load_reg256(&swap_128[0]);
+}
+
+void print_test_array(__m256i res, const std::string& msg) {
+  std::cout << msg << std::endl;
+  for (int i=0; i<8; i++)
+    std::cout << ((int *)&res)[i] << "\t";
+  std::cout << std::endl;
 }
 
 void test_basic() {
@@ -182,44 +182,4 @@ void test_basic() {
   minmax(test1, test2, min, max);
   print_test_array(min, "Minimum");
   print_test_array(max, "Maximum");
-}
-
-inline void generate_random(int *a) {
-  for (int i=0; i<8; i++) {
-    a[i] = (rand()%200);
-  }
-}
-
-void test_sort64() {
-  int a[8][8];
-  __m256i row[8];
-
-  for(int i = 0; i< 8; i++) {
-    generate_random(a[i]);
-    row[i] =  _mm256_load_si256((__m256i *) &(a[i][0]));
-  }
-
-  sort64(row);
-
-  bool succeed = true;
-  for(int i = 0; i<8; i++){
-    for(int j = 1; j<8; j++) {
-      if(((int *) &row[i])[j] < ((int *) &row[i])[j-1]){
-        succeed = false;
-        break;
-      }
-    }
-  }
-
-  if(!succeed){
-    std::cout << "Sort64 test failed\n";
-    for(int i = 0; i<8; i++){
-      for(int j = 1; j<8; j++) {
-        std::cout << ((int *) &row[i])[j] << " ";
-      }
-      std::cout <<std::endl;
-    }
-  } else {
-    std::cout << "Sort64 test pass\n";
-  }
 }
