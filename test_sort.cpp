@@ -38,6 +38,7 @@ void test_sort() {
   print_register(result.second, "Lower");
 }
 
+// generate a random array of sorted elements
 void generate_random_array(int *a, int size=8) {
   for (int i=0; i<size; i++) {
     a[i] = get_rand_1000();
@@ -45,7 +46,7 @@ void generate_random_array(int *a, int size=8) {
   qsort(a, size, sizeof(int), compare);
 }
 
-bool is_sorted(__m256i a, int *prev) {
+bool is_sorted_register(__m256i a, int *prev) {
   for (int i=0; i<8; i++) {
     auto curr = ((int *) &a)[i];
     if (curr < *prev) return false;
@@ -57,8 +58,8 @@ bool is_sorted(__m256i a, int *prev) {
 bool check_bitonic_result(int *a, int *b, 
     std::pair<__m256i, __m256i>& result) {
   int prev = 0;
-  if (is_sorted(result.first, &prev)) {
-    if (is_sorted(result.second, &prev)) {
+  if (is_sorted_register(result.first, &prev)) {
+    if (is_sorted_register(result.second, &prev)) {
       return true;
     }
   }
@@ -112,40 +113,79 @@ void test_sort_column() {
   }
 }
 
-bool check_merge_phase(int *out, int len) {
+bool is_sorted_array(int *out, int len) {
   int prev = out[0];
   for (int i=1; i<len; i++) {
     if (out[i] < prev)
       return false;
+    prev = out[i];
   }
   return true;
 }
 
-bool test_merge_phase() {
-  int a[16], b[16], c[32];
-  //int c[32];
-  generate_random_array(a, 16);
-  generate_random_array(b, 16);
-  merge_phase(a, b, c, 16);
-  if (check_merge_phase(c, 16) == false) {
-    print_array(a, "A", 16);
-    print_array(b, "B", 16);
-    print_array(c, "Out", 16);
-    return false;
+void create_merge_array(int *a, int array_size, int merge_size) {
+  // created sorted runs of 8 elements
+  for (int i=0; i<array_size; i+=merge_size) {
+    generate_random_array(&a[i], merge_size);
   }
-  return true;
+}
+
+bool test_merge_phase(int size) {
+  bool status;
+  int *a = new int[size], *out = new int[size];
+  create_merge_array(a, size, size/2);
+  merge_phase(a, out, 0, (size/2)-1, size-1);
+  if (is_sorted_array(out, size) == false) {
+    print_array(a, "A", size);
+    print_array(out, "Out", size);
+    status = false;
+  } else {
+    status = true;
+  }
+  delete[] a;
+  delete[] out;
+  return status;
+}
+
+
+
+bool test_merge_pass(int array_size, int merge_size) {
+  bool status;
+  int *a = new int[array_size];
+  int *out = new int[array_size];
+  create_merge_array(a, array_size, merge_size);
+  print_array(a, "A", array_size);
+
+  merge_pass(a, out, array_size, merge_size);
+
+  if (is_sorted_array(out, array_size) == false) {
+    std::cout << "sorted" << std::endl;
+    print_array(a, "A", array_size);
+    print_array(out, "Out", array_size);
+    status = false;
+  } else {
+    status = true;
+  }
+
+  delete[] a;
+  delete[] out;
+  return status;
 }
 
 int main() {
-  test_sort64();
-  int num_iters = 100000;
+  // test_sort_column();
+  int num_iters = 10000;
   srand(time(NULL));
   initialize();
+
+  // test_merge_phase(16);
   for (int i=0; i<num_iters; i++) {
     if (!test_bitonic_merge())
       return 1;
-    if (!test_merge_phase())
+    if (!test_merge_phase(32))
       return 1;
+    // if (!test_merge_pass(48, 16))
+    //   return 1;
   }
   std::cout << "Passed:" << num_iters << std::endl;
   return 0;

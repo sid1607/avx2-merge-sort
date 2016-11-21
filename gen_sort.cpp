@@ -1,16 +1,17 @@
 #include "merge_sort.h"
 #include <iostream>
+#include <algorithm>
 
 // add sort phase
 
-void merge_phase(int *a, int *b, int *out, int merge_size) {
-  int i=0, j=0, k=0; // index ptrs for a and b
-  int i_end = i+merge_size, j_end = j+merge_size;
+// the two input arrays are a[start, mid] and a[mid+1, end]
+void merge_phase(int *a, int *out, int start, int mid, int end) {
+  int i=0, j=mid+1, k=0;
+  int i_end = mid - start + 1;
+  int j_end = end - mid + i_end;
 
   auto ra = load_reg256(&a[i]);
-  auto rb = load_reg256(&b[j]);
-
-  // std::cout << "reached" << std::endl;
+  auto rb = load_reg256(&a[j]);
 
   i += SIMD_SIZE;
   j += SIMD_SIZE;
@@ -26,11 +27,11 @@ void merge_phase(int *a, int *b, int *out, int merge_size) {
     ra = result.second;
 
     // select the input with the lowest value at the current pointer
-    if (a[i] < b[j]) {
+    if (a[i] < a[j]) {
       rb = load_reg256(&a[i]);
       i += SIMD_SIZE;
     } else {
-      rb = load_reg256(&b[j]);
+      rb = load_reg256(&a[j]);
       j += SIMD_SIZE;
     }
   } while (i < i_end && j < j_end);
@@ -53,7 +54,7 @@ void merge_phase(int *a, int *b, int *out, int merge_size) {
 
   // consume remaining data from b, if left
   while (j < j_end) {
-    rb = load_reg256(&b[j]);
+    rb = load_reg256(&a[j]);
     j += SIMD_SIZE;
     auto result = bitonic_merge(ra, rb);
     store_reg256(&out[k], result.first);
@@ -66,10 +67,13 @@ void merge_phase(int *a, int *b, int *out, int merge_size) {
   k += SIMD_SIZE;
 }
 
+// minimum merge_size=16, minimum n=2*merge_size
 void merge_pass(int *in, int *out, int n, int merge_size) {
-  for (int i=0; i < n-merge_size; i+=2*merge_size) {
+  for (int i=0; i < n-1; i+=2*merge_size) {
+    auto mid = i + merge_size - 1;
+    auto end = std::min(i+2*merge_size-1, n-1);
     // merge two merge_size arrays per iteration
-    merge_phase(in+i, in+i+merge_size, out+i, merge_size);
+    merge_phase(in+i, out+i, i, mid, end);
   }
 }
 

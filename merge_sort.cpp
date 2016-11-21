@@ -31,19 +31,19 @@ inline void minmax(__m256i& a, __m256i& b, __m256i& minab, __m256i& maxab){
 }
 
 inline void minmax(__m256i& a, __m256i& b){
-    auto t = a;
-    a = _mm256_min_epu32(a, b);
-    b = _mm256_max_epu32(t, b);
-    return;
+  auto t = a;
+  a = _mm256_min_epu32(a, b);
+  b = _mm256_max_epu32(t, b);
+  return;
 }
 
 inline __m256i shuffle(__m256i& a, int* idx_array) {
-    __m256i idx = _mm256_load_si256((__m256i *)idx_array);
-    return _mm256_permutevar8x32_epi32(a, idx);
+  __m256i idx = _mm256_load_si256((__m256i *)idx_array);
+  return _mm256_permutevar8x32_epi32(a, idx);
 }
 
 inline __m256i register_shuffle(__m256i& a, __m256i& mask) {
-    return _mm256_permutevar8x32_epi32(a, mask);
+  return _mm256_permutevar8x32_epi32(a, mask);
 }
 
 
@@ -222,5 +222,4 @@ void test_sort64() {
   } else {
     std::cout << "Sort64 test pass\n";
   }
-
 }

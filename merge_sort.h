@@ -43,6 +43,6 @@ void initialize();
 
 void test_sort64();
 
-void merge_phase(int *a, int *b, int *out, int merge_size);
+void merge_phase(int *a, int *out, int start, int mid, int end);
 
 void merge_pass(int *in, int *out, int n, int merge_size);
