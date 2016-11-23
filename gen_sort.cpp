@@ -125,7 +125,7 @@ std::pair<std::vector<int>, std::vector<int>>
   if (a.size()%64!=0) {
     // add padding
     auto i = a.size();
-    auto end = (i+64/64)*64;
+    auto end = ((i+64)/64)*64;
     while (i<end) {
       a.push_back(INT_MAX);
       i++;

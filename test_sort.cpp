@@ -276,7 +276,7 @@ bool test_merge_sort(int len) {
 
 int main() {
   int num_iters = 1;
-  int start = 262144, end = 262144;
+  int start = 65537, end = 65537;
   srand(time(NULL));
   initialize();
 
