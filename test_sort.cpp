@@ -1,6 +1,8 @@
 #include <time.h>
 #include <iostream>
 #include <chrono>
+#include <algorithm>
+#include <iterator>
 #include "merge_sort.h"
 
 void print_array(int *a, const std::string& msg, int size=8) {
@@ -23,9 +25,14 @@ int get_rand_1000() {
   return ((rand()%2000));
 }
 
-int compare (const void * a, const void * b)
+inline bool compare_vec (int a, int b)
 {
-  return ( *(int*)a - *(int*)b );
+  return a<b;
+}
+
+int compare (const void *a, const void *b)
+{
+  return (*(int *)a - *(int *)b);
 }
 
 void test_sort() {
@@ -224,16 +231,17 @@ bool test_merge_pass(int array_size, int merge_size) {
   return status;
 }
 
-void generate_reference(int *a, int *ref, int len) {
-  std::copy(a, a+len, ref);
-  qsort(ref, len, sizeof(int), compare);
+void generate_reference(std::vector<int>& ref) {
+  std::sort(ref.begin(), ref.end(), compare_vec);
 }
 
 bool test_merge(int len) {
   bool status;
   std::vector<int> a(len), temp(len), ref(len);
   create_merge_array(&a[0], len, 16);
-  generate_reference(&a[0], &ref[0], len);
+  std::copy(&a[0], &a[0]+len, &ref[0]);
+
+  generate_reference(ref);
   auto res = merge(a, temp);
   if (is_sorted_array(&res.first[0], &ref[0], len) == false) {
     print_array(&ref[0], "Ref", len);
@@ -255,10 +263,12 @@ bool test_merge_sort(int len) {
   bool status = true;
   std::vector<int> a(len), temp(len), ref(len);
   generate_random_array(&a[0], len);
-  // print_array(&a[0], "A", len);
+  std::copy(&a[0], &a[0]+len, &ref[0]);
+
   auto std_start = get_time();
-  generate_reference(&a[0], &ref[0], len);
+  generate_reference(ref);
   auto std_end = get_time();
+
   auto res = merge_sort(a,temp);
   auto merge_end = get_time();
   // print_array(&res.first[0], "Out", len);
@@ -276,7 +286,7 @@ bool test_merge_sort(int len) {
 
 int main() {
   int num_iters = 1;
-  int start = 65537, end = 65537;
+  int start = 1<<21, end = 1<<21;
   srand(time(NULL));
   initialize();
 
