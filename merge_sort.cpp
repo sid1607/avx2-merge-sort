@@ -4,15 +4,11 @@
 
 masks global_masks;
 
-__m256i load_reg256(int *a) {
-  return _mm256_maskload_epi32(a, global_masks.load_store_mask);
-}
-
-__m256i load_reg256(int64_t *a) {
+__m256i load_reg256(long *a) {
   return _mm256_maskload_epi64(a, global_masks.load_store_mask);
 }
 
-void store_reg256(int *a, __m256i& b) {
+void store_reg256(int64_t *a, __m256i& b) {
   _mm256_maskstore_epi32(a, global_masks.load_store_mask, b);
 }
 
@@ -235,10 +231,13 @@ __m256i intra_register_sort(__m256i& l8) {
 
 void initialize() {
   // directly set load store mask in 32B aligned memory
-  alignas(32) int load_store_mask[8] =
-    {1<<31,1<<31,1<<31,1<<31,1<<31,1<<31,1<<31,1<<31};
+  alignas(32) int load_store_mask[8] = 
+    {1<<31,1<<31,1<<31,1<<31,0,0,0,0};
+  auto load_store_mask_256 =
+    _mm256_load_si256((__m256i *) &load_store_mask[0]);
   global_masks.load_store_mask = 
-      _mm256_load_si256((__m256i *) &load_store_mask[0]);
+    _mm256_castsi256_si128(load_store_mask_256);
+      
 
   // load the remaining masks
   int rev_idx_mask[8] = {7,6,5,4,3,2,1,0};

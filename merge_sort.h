@@ -1,4 +1,4 @@
-#include <immintrin.h> 
+#include <immlongrin.h> 
 #include <utility>
 #include <string>
 #include <vector>
@@ -7,25 +7,22 @@
 #define SORT_SIZE 64
 
 typedef struct masks {
-  __m256i load_store_mask;
+  __m128i load_store_mask;
   __m256i rev_idx_mask;
   __m256i swap_128;
 } masks;
 
 extern masks global_masks;
 
-__m256i load_reg256(int *a);
+__m256i load_reg256(int64_t *a);
 
-__m256i load_reg256(int64_t
-                    *a);
-
-void store_reg256(int *a, __m256i& b);
+void store_reg256(int64_t *a, __m256i& b);
 
 __m256i reverse(__m256i& v);
 
 __m256i interleave_low(__m256i& a, __m256i& b);
 
-__m256i interleave_high(__m256i& a, __m256i& b);
+__m256i intleave_high(__m256i& a, __m256i& b);
 
 void minmax(__m256i& a, __m256i& b, __m256i& minab, __m256i& maxab);
 
@@ -53,16 +50,16 @@ void sort_columns(__m256i& a0, __m256i& a1, __m256i& a2, __m256i& a3,
 
 std::pair<__m256i, __m256i> bitonic_merge(__m256i& a, __m256i& b);
 
-__m256i intra_register_sort(__m256i& l8);
+__m256i longra_register_sort(__m256i& l8);
 
 void initialize();
 
-void merge_phase(int *a, int *out, int start, int mid, int end);
+void merge_phase(long *a, long *out, long start, long mid, long end);
 
-void merge_pass(int *in, int *out, int n, int merge_size);
+void merge_pass(long *in, long *out, long n, long merge_size);
 
-std::pair<std::vector<int>, std::vector<int>> 
-    merge(std::vector<int>& a, std::vector<int>& b);
+std::pair<std::vector<long>, std::vector<long>> 
+    merge(std::vector<long>& a, std::vector<long>& b);
 
 std::pair<std::vector<int>, std::vector<int>>
     merge_sort(std::vector<int>& a, std::vector<int>& b);
