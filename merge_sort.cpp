@@ -4,30 +4,30 @@
 
 masks global_masks;
 
-__m256i load_reg256(long *a) {
+__m256i load_reg256(int64_t *a) {
   return _mm256_maskload_epi64(a, global_masks.load_store_mask);
 }
 
 void store_reg256(int64_t *a, __m256i& b) {
-  _mm256_maskstore_epi32(a, global_masks.load_store_mask, b);
+  _mm256_maskstore_epi64(a, global_masks.load_store_mask, b);
 }
 
 inline __m256i reverse(__m256i& v) {
-  return _mm256_permutevar8x32_epi32(v, global_masks.rev_idx_mask);
+  return _mm256_permutevar4x64_epi64(v, 0x1b);
 }
 
 inline __m256i interleave_low(__m256i& a, __m256i& b) {
-  return _mm256_unpacklo_epi32(a,b);
+  return _mm256_unpacklo_epi64(a,b);
 }
 
 inline __m256i interleave_high(__m256i& a, __m256i& b) {
-  return _mm256_unpackhi_epi32(a,b);
+  return _mm256_unpackhi_epi64(a,b);
 }
 
 inline void minmax(__m256i& a, __m256i& b, __m256i& minab, __m256i& maxab){
-    minab = _mm256_min_epu32(a, b);
-    maxab = _mm256_max_epu32(a, b);
-    return;
+  minab = _mm256_min_epu32(a, b);
+  maxab = _mm256_max_epu32(a, b);
+  return;
 }
 
 inline void minmax(__m256i& a, __m256i& b){
@@ -43,24 +43,6 @@ inline void minmax64(__m256i& a, __m256i& b){
   auto t = a;
   a = _mm256_blendv_epi8(a, b, mask);
   b = _mm256_blendv_epi8(b, t, mask);
-}
-
-inline __m256i shuffle(__m256i& a, int* idx_array) {
-  __m256i idx = _mm256_load_si256((__m256i *)idx_array);
-  return _mm256_permutevar8x32_epi32(a, idx);
-}
-
-inline __m256i register_shuffle(__m256i& a, __m256i& mask) {
-  return _mm256_permutevar8x32_epi32(a, mask);
-}
-
-
-std::pair<__m256i, __m256i> bitonic_merge(__m256i& a, __m256i& b) {
-  __m256i minabr, maxabr;
-  __m256i br = reverse(b);
-  minmax(a,br, minabr, maxabr);
-  return std::make_pair(intra_register_sort(minabr), 
-    intra_register_sort(maxabr));
 }
 
 inline void transpose8(__m256* row0, __m256* row1, __m256* row2, __m256* row3,
@@ -195,7 +177,6 @@ void sort64(__m256i* row) {
   sort64(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]);
 }
 
-
 void sort16_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3) {
   sort_columns_64i(row0, row1, row2, row3);
   transpose4_64i(row0, row1, row2, row3);
@@ -210,40 +191,46 @@ void sort32_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
   transpose8_64i(row0, row1, row2, row3, row4, row5, row6, row7);
 }
 
+// 8-by-8 merge
+void bitonic_merge(__m256i& a, __m256i& b, __m256i& c, __m256i& d) {
+  // 8-by-8 minmax
+  auto cr = reverse(c);
+  auto dr = reverse(d);
+  std::tie(a,c) = minmax(a, dr);
+  std::tie(b,d) = minmax(b, cr);
 
-__m256i intra_register_sort(__m256i& l8) {
+  // 4-by-4 minmax
+  std::tie(a,b) = minmax(a,b);
+  std::tie(c,d) = minmax(c,d);
+
+  // intra-register minmax
+  intra_register_sort(a);
+  intra_register_sort(b);
+  intra_register_sort(c);
+  intra_register_sort(d);
+}
+
+void intra_register_sort(__m256i& wxyz) {
   __m256i min, max;
-  // phase 1
-  auto l8_1 = register_shuffle(l8, global_masks.swap_128);
-  minmax(l8, l8_1, min, max);
-  auto l4 = _mm256_permute2x128_si256(min, max, 0x20);
-  // phase 2
-  auto l4_1 = _mm256_shuffle_epi32(l4, 0x4e);
-  minmax(l4, l4_1, min, max);
-  auto l2 = _mm256_unpacklo_epi64(min, max);
-  // phase 3
-  auto l2_1 = _mm256_shuffle_epi32(l2, 0xb1);
-  minmax(l2, l2_1, min, max);
-  min = _mm256_shuffle_epi32(min, 0xd8);
-  max = _mm256_shuffle_epi32(max, 0xd8);
-  return _mm256_unpacklo_epi32(min, max);
+
+  // 2-by-2 merge
+  auto yzwx = _mm256_permutevar4x64_epi64(wxyz, 0x4e);
+  minmax(wxyz, yzwx);
+  // pick top-2 and last-2 64 bit elements from
+  // corresponding registers
+  wxyz = _mm256_blend_epi32(wxyz, yzwx, 0xf0);
+
+  // 1-by-1 merge
+  xwzy = _mm256_shuffle_epi32(wxyz, 0x4e);
+  minmax(wxyz, xwzy);
+  // pick alternate elements from registers
+  wxyz = _mm256_blend_epi32(wxyz, xwzy, 0xcc);
 }
 
 void initialize() {
-  // directly set load store mask in 32B aligned memory
-  alignas(32) int load_store_mask[8] = 
-    {1<<31,1<<31,1<<31,1<<31,0,0,0,0};
-  auto load_store_mask_256 =
-    _mm256_load_si256((__m256i *) &load_store_mask[0]);
+  auto load_store_mask_256 = _mm256_set1_epi32(1<<31);
   global_masks.load_store_mask = 
     _mm256_castsi256_si128(load_store_mask_256);
-      
-
-  // load the remaining masks
-  int rev_idx_mask[8] = {7,6,5,4,3,2,1,0};
-  int swap_128[8] = {4,5,6,7,0,1,2,3};
-  global_masks.rev_idx_mask = load_reg256(&rev_idx_mask[0]);
-  global_masks.swap_128 = load_reg256(&swap_128[0]);
 }
 
 void print_test_array(__m256i res, const std::string& msg) {
