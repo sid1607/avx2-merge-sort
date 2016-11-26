@@ -3,6 +3,8 @@
 #include <chrono>
 #include "merge_sort.h"
 
+void sort161(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3) {}
+
 void print_array(int *a, const std::string& msg, int size=8) {
   std::cout << msg << std::endl;
   for (int i=0; i<size; i++) {
@@ -49,6 +51,12 @@ void generate_random_sorted_array(int *a, int size=8) {
 void generate_random_array(int *a, int size) {
   for(int i=0; i<size; i++) {
     a[i] = get_rand_1000();
+  }
+}
+
+void generate_random_array_withptr(int64_t *a, int size) {
+  for(int i=0; i<size; i++) {
+    a[i] = (get_rand_1000() << 32) + get_rand_1000();
   }
 }
 
@@ -119,30 +127,38 @@ void test_sort_column() {
   }
 }
 
-bool test_sort64() {
-  int a[8][8];
-  __m256i row[8];
+bool test_sort16() {
+  int64_t a[4][4];
+  __m256i row[4];
 
-  for(int i = 0; i< 8; i++) {
-    generate_random_array(a[i], 8);
+  for(int i = 0; i< 4; i++) {
+    generate_random_array_withptr(a[i], 4);
     row[i] =  load_reg256(&(a[i][0]));
   }
 
-  sort64(row);
-
-  bool succeed = true;
-  for(int i = 0; i<8; i++){
+  for(int i = 0; i<4; i++){
     for(int j = 1; j<8; j++) {
-      if(((int *) &row[i])[j] < ((int *) &row[i])[j-1]){
-        succeed = false;
-        break;
-      }
+      std::cout << ((int *) &row[i])[j] << " ";
     }
+    std::cout <<std::endl;
   }
+
+  __m256i& r0 = row[0];
+  sort161(r0, r0, r0, r0);
+
+  bool succeed = false;
+//  for(int i = 0; i<8; i++){
+//    for(int j = 1; j<8; j++) {
+//      if(((int *) &row[i])[j] < ((int *) &row[i])[j-1]){
+//        succeed = false;
+//        break;
+//      }
+//    }
+//  }
 
   if(!succeed){
     std::cout << "Sort64 test failed\n";
-    for(int i = 0; i<8; i++){
+    for(int i = 0; i<4; i++){
       for(int j = 1; j<8; j++) {
         std::cout << ((int *) &row[i])[j] << " ";
       }
@@ -152,6 +168,40 @@ bool test_sort64() {
 
   return succeed;
 }
+
+//bool test_sort64() {
+//  int a[8][8];
+//  __m256i row[8];
+//
+//  for(int i = 0; i< 8; i++) {
+//    generate_random_array(a[i], 8);
+//    row[i] =  load_reg256(&(a[i][0]));
+//  }
+//
+//  sort64(row);
+//
+//  bool succeed = true;
+//  for(int i = 0; i<8; i++){
+//    for(int j = 1; j<8; j++) {
+//      if(((int *) &row[i])[j] < ((int *) &row[i])[j-1]){
+//        succeed = false;
+//        break;
+//      }
+//    }
+//  }
+//
+//  if(!succeed){
+//    std::cout << "Sort64 test failed\n";
+//    for(int i = 0; i<8; i++){
+//      for(int j = 1; j<8; j++) {
+//        std::cout << ((int *) &row[i])[j] << " ";
+//      }
+//      std::cout <<std::endl;
+//    }
+//  }
+//
+//  return succeed;
+//}
 
 bool is_sorted_array(int *out, int len) {
   int prev = out[0];
@@ -278,14 +328,27 @@ int main() {
   int num_iters = 1;
   int start = 65537, end = 65537;
   srand(time(NULL));
+
   initialize();
 
-  for(int i=start; i<=end;i++) {
-    for (int j=0; j<num_iters; j++) {
-      if(!test_merge_sort(i))
-        return 1;
-    }
-    std::cout << "Passed:(" << i << "," << num_iters << ")" << std::endl;
-  }
+//  auto start32 = get_time();
+//  test_minmax();
+//  auto end32 = get_time();
+//  test_minmax64();
+//  auto end64 = get_time();
+//
+//  std::cout << "minmax time:" << end32-start32 << " minmax64 time:"
+//  << end64 - end32 << std::endl;
+
+  test_sort16();
+
+//
+//  for(int i=start; i<=end;i++) {
+//    for (int j=0; j<num_iters; j++) {
+//      if(!test_merge_sort(i))
+//        return 1;
+//    }
+//    std::cout << "Passed:(" << i << "," << num_iters << ")" << std::endl;
+//  }
   return 0;
 }

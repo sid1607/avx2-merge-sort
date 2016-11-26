@@ -16,6 +16,9 @@ extern masks global_masks;
 
 __m256i load_reg256(int *a);
 
+__m256i load_reg256(int64_t
+                    *a);
+
 void store_reg256(int *a, __m256i& b);
 
 __m256i reverse(__m256i& v);
@@ -27,6 +30,8 @@ __m256i interleave_high(__m256i& a, __m256i& b);
 void minmax(__m256i& a, __m256i& b, __m256i& minab, __m256i& maxab);
 
 void minmax(__m256i& a, __m256i& b);
+
+void minmax64(__m256i& a, __m256i& b);
 
 __m256i register_shuffle(__m256i& a, __m256i& mask);
 
@@ -53,3 +58,6 @@ std::pair<std::vector<int>, std::vector<int>>
 
 std::pair<std::vector<int>, std::vector<int>>
     merge_sort(std::vector<int>& a, std::vector<int>& b);
+
+void test_minmax64();
+void test_minmax();
