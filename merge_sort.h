@@ -53,6 +53,10 @@ void intra_register_sort(__m256i& reg);
 
 void test_basic();
 
+void print_register(__m256i& a, const std::string& msg);
+
+void print_array(int *a, const std::string& msg, int size=8);
+
 void initialize();
 
 void merge_phase(int64_t *a, int64_t *out, int64_t start, int64_t mid, int64_t end);

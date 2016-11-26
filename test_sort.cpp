@@ -5,7 +5,7 @@
 #include <iterator>
 #include "merge_sort.h"
 
-void print_array(int *a, const std::string& msg, int size=8) {
+void print_array(int *a, const std::string& msg, int size) {
   std::cout << msg << std::endl;
   for (int i=0; i<size; i++) {
     std::cout << a[i] <<  ",";
@@ -13,7 +13,7 @@ void print_array(int *a, const std::string& msg, int size=8) {
   std::cout << std::endl;
 }
 
-void print_register(__m256i a, const std::string& msg) {
+void print_register(__m256i& a, const std::string& msg) {
   std::cout << msg << std::endl;
   for (int i=0; i<8; i++) {
     std::cout << ((int *) &a)[i] <<  ",";

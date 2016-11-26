@@ -274,13 +274,13 @@ void test_basic() {
   __m256i test1 = load_reg256(&test_arr1[0]);
   __m256i test2 = load_reg256(&test_arr2[0]);
   __m256i mask = load_reg256(&idx[0]);
-  print_test_array(test1, "test1");
-  print_test_array(test2, "test2");
-  print_test_array(reverse(test1), "Reverse Output");
-  print_test_array(register_shuffle(test1, mask), "Register shuffle");
-  print_test_array(interleave_low(test1, test2), "interleave_low");
-  print_test_array(interleave_high(test1, test2), "interleave_high");
+  print_register(test1, "test1");
+  print_register(test2, "test2");
+  print_register(reverse(test1), "Reverse Output");
+  print_register(register_shuffle(test1, mask), "Register shuffle");
+  print_register(interleave_low(test1, test2), "interleave_low");
+  print_register(interleave_high(test1, test2), "interleave_high");
   minmax(test1, test2, min, max);
-  print_test_array(min, "Minimum");
-  print_test_array(max, "Maximum");
+  print_register(min, "Minimum");
+  print_register(max, "Maximum");
 }
