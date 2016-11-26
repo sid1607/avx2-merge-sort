@@ -125,7 +125,7 @@ void test_sort_column() {
   }
 }
 
-bool test_sort16() {
+bool test_sort16_64i() {
   int64_t a[4][4];
   __m256i row[4];
 
@@ -142,30 +142,48 @@ bool test_sort16() {
     std::cout <<std::endl;
   }
 
-  sort16(row[0], row[1], row[2], row[3]);
+  sort16_64i(row[0], row[1], row[2], row[3]);
 
-  bool succeed = false;
-//  for(int i = 0; i<8; i++){
-//    for(int j = 1; j<8; j++) {
-//      if(((int *) &row[i])[j] < ((int *) &row[i])[j-1]){
-//        succeed = false;
-//        break;
-//      }
-//    }
-//  }
-
-  if(!succeed){
-    std::cout << "Sort64 test failed\n";
-    for(int i = 0; i<4; i++){
-      for(int j = 0; j<8; j+=2) {
-        std::cout.width(10);
-        std::cout << ((int *) &row[i])[j] << "|" << ((int *) &row[i])[j+1] << "\t";
-      }
-      std::cout <<std::endl;
+  std::cout << "Sort64 result\n";
+  for(int i = 0; i<4; i++){
+    for(int j = 0; j<8; j+=2) {
+      std::cout.width(10);
+      std::cout << ((int *) &row[i])[j] << "|" << ((int *) &row[i])[j+1] << "\t";
     }
+    std::cout <<std::endl;
   }
 
-  return succeed;
+  return true;
+}
+
+void test_sort32_64i() {
+  alignas(128) int64_t a[8][4];
+  __m256i row[8];
+
+  for(int i = 0; i< 8; i++) {
+    generate_random_array_withptr(a[i], 8);
+    row[i] =  load_reg256(&(a[i][0]));
+  }
+
+  for(int i = 0; i<8; i++){
+    for(int j = 0; j<8; j+=2) {
+      std::cout.width(10);
+      std::cout << ((int *) &row[i])[j] << "|" << ((int *) &row[i])[j+1] << "\t";
+    }
+    std::cout <<std::endl;
+  }
+
+  sort32_64i(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]);
+
+  std::cout << "Sort64 result\n";
+  for(int i = 0; i<8; i++){
+    for(int j = 0; j<8; j+=2) {
+      std::cout.width(10);
+      std::cout << ((int *) &row[i])[j] << "|" << ((int *) &row[i])[j+1] << "\t";
+    }
+    std::cout <<std::endl;
+  }
+
 }
 
 bool test_sort64() {
@@ -339,7 +357,7 @@ int main() {
 //  std::cout << "minmax time:" << end32-start32 << " minmax64 time:"
 //  << end64 - end32 << std::endl;
 
-  test_sort16();
+  test_sort32_64i();
 
 //
 //  for(int i=start; i<=end;i++) {

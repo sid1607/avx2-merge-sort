@@ -97,7 +97,32 @@ inline void transpose8(__m256* row0, __m256* row1, __m256* row2, __m256* row3,
   *row7 = _mm256_permute2f128_ps(__tt3, __tt7, 0x31);
 }
 
-void transpose4(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3) {
+inline void transpose8_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
+                           __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7) {
+  __m256i __t0 = _mm256_unpacklo_epi64(row0, row1);
+  __m256i __t1 = _mm256_unpackhi_epi64(row0, row1);
+  __m256i __t2 = _mm256_unpacklo_epi64(row2, row3);
+  __m256i __t3 = _mm256_unpackhi_epi64(row2, row3);
+
+  __m256i __t4 = _mm256_unpacklo_epi64(row4, row5);
+  __m256i __t5 = _mm256_unpackhi_epi64(row4, row5);
+  __m256i __t6 = _mm256_unpacklo_epi64(row6, row7);
+  __m256i __t7 = _mm256_unpackhi_epi64(row6, row7);
+
+  row0 = (__m256i) _mm256_permute2f128_si256(__t0, __t2, 0x20);
+  row2 = (__m256i) _mm256_permute2f128_si256(__t1, __t3, 0x20);
+  row4 = (__m256i) _mm256_permute2f128_si256(__t0, __t2, 0x31);
+  row6 = (__m256i) _mm256_permute2f128_si256(__t1, __t3, 0x31);
+
+  row1 = (__m256i) _mm256_permute2f128_si256(__t4, __t6, 0x20);
+  row3 = (__m256i) _mm256_permute2f128_si256(__t5, __t7, 0x20);
+  row5 = (__m256i) _mm256_permute2f128_si256(__t4, __t6, 0x31);
+  row7 = (__m256i) _mm256_permute2f128_si256(__t5, __t7, 0x31);
+
+
+}
+
+inline void transpose4_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3) {
   __m256i __t0 = _mm256_unpacklo_epi64(row0, row1);
   __m256i __t1 = _mm256_unpackhi_epi64(row0, row1);
   __m256i __t2 = _mm256_unpacklo_epi64(row2, row3);
@@ -107,20 +132,29 @@ void transpose4(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3) {
   row1 = (__m256i) _mm256_permute2f128_si256(__t1, __t3, 0x20);
   row2 = (__m256i) _mm256_permute2f128_si256(__t0, __t2, 0x31);
   row3 = (__m256i) _mm256_permute2f128_si256(__t1, __t3, 0x31);
-
-
-//  row0 = (__m256i) _mm256_shuffle_pd(__t0, __t2, _MM_SHUFFLE(0, 1, 4, 5));
-//  row1 = (__m256i) _mm256_shuffle_pd(__t1, __t3, _MM_SHUFFLE(0, 1, 4, 5));
-//  row2 = (__m256i) _mm256_shuffle_pd(__t0, __t2, _MM_SHUFFLE(2, 3, 6, 7));
-//  row3 = (__m256i) _mm256_shuffle_pd(__t1, __t3, _MM_SHUFFLE(2, 3, 6, 7));
 }
 
-void sort_columns(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3) {
+void sort_columns_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3) {
   minmax64(row0,row1);
   minmax64(row2,row3);
   minmax64(row0,row2);
   minmax64(row1,row3);
   minmax64(row1,row2);
+}
+
+void merge8_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
+                __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7) {
+  minmax64(row0, row4);
+  minmax64(row1, row5);
+  minmax64(row2, row6);
+  minmax64(row3, row7);
+
+  minmax64(row2, row4);
+  minmax64(row3, row5);
+
+  minmax64(row1, row2);
+  minmax64(row3, row4);
+  minmax64(row5, row6);
 }
 
 
@@ -155,7 +189,7 @@ void sort_columns(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
 }
 
 void sort64(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
-                   __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7) {
+            __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7) {
   sort_columns(row0, row1, row2, row3, row4, row5, row6, row7);
   transpose8((__m256 *)&row0, (__m256 *)&row1, (__m256 *)&row2, (__m256 *)&row3,
              (__m256 *)&row4, (__m256 *)&row5, (__m256 *)&row6, (__m256 *)&row7);
@@ -165,9 +199,19 @@ void sort64(__m256i* row) {
   sort64(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]);
 }
 
-void sort16(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3) {
-  sort_columns(row0, row1, row2, row3);
-  transpose4(row0, row1, row2, row3);
+
+void sort16_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3) {
+  sort_columns_64i(row0, row1, row2, row3);
+  transpose4_64i(row0, row1, row2, row3);
+}
+
+void sort32_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
+            __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7) {
+  sort_columns_64i(row0, row1, row2, row3);
+  sort_columns_64i(row4, row5, row6, row7);
+
+  merge8_64i(row0, row1, row2, row3, row4, row5, row6, row7);
+  transpose8_64i(row0, row1, row2, row3, row4, row5, row6, row7);
 }
 
 
@@ -191,7 +235,7 @@ __m256i intra_register_sort(__m256i& l8) {
 
 void initialize() {
   // directly set load store mask in 32B aligned memory
-  alignas(32) int load_store_mask[8] = 
+  alignas(32) int load_store_mask[8] =
     {1<<31,1<<31,1<<31,1<<31,1<<31,1<<31,1<<31,1<<31};
   global_masks.load_store_mask = 
       _mm256_load_si256((__m256i *) &load_store_mask[0]);

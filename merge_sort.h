@@ -40,7 +40,13 @@ void sort64(__m256i* row);
 void sort64(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
             __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7);
 
-void sort16(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3);
+//return  8-element sorted array
+void sort32_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
+            __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7);
+
+void sort16_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3);
+
+
 
 void sort_columns(__m256i& a0, __m256i& a1, __m256i& a2, __m256i& a3,
                   __m256i& a4, __m256i& a5, __m256i& a6, __m256i& a7);
