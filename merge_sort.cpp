@@ -98,15 +98,21 @@ inline void transpose8(__m256* row0, __m256* row1, __m256* row2, __m256* row3,
 }
 
 void transpose4(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3) {
-  __m256d __t0 = (__m256d)_mm256_unpacklo_epi64(row0, row1);
-  __m256d __t1 = (__m256d)_mm256_unpackhi_epi64(row0, row1);
-  __m256d __t2 = (__m256d)_mm256_unpacklo_epi64(row2, row3);
-  __m256d __t3 = (__m256d)_mm256_unpackhi_epi64(row2, row3);
+  __m256i __t0 = _mm256_unpacklo_epi64(row0, row1);
+  __m256i __t1 = _mm256_unpackhi_epi64(row0, row1);
+  __m256i __t2 = _mm256_unpacklo_epi64(row2, row3);
+  __m256i __t3 = _mm256_unpackhi_epi64(row2, row3);
 
-  row0 = (__m256i) _mm256_shuffle_pd(__t0, __t1, _MM_SHUFFLE(0, 1, 4, 5));
-  row1 = (__m256i) _mm256_shuffle_pd(__t0, __t1, _MM_SHUFFLE(2, 3, 6, 7));
-  row2 = (__m256i) _mm256_shuffle_pd(__t2, __t3, _MM_SHUFFLE(0, 1, 4, 5));
-  row3 = (__m256i) _mm256_shuffle_pd(__t2, __t3, _MM_SHUFFLE(2, 3, 6, 7));
+  row0 = (__m256i) _mm256_permute2f128_si256(__t0, __t2, 0x20);
+  row1 = (__m256i) _mm256_permute2f128_si256(__t1, __t3, 0x20);
+  row2 = (__m256i) _mm256_permute2f128_si256(__t0, __t2, 0x31);
+  row3 = (__m256i) _mm256_permute2f128_si256(__t1, __t3, 0x31);
+
+
+//  row0 = (__m256i) _mm256_shuffle_pd(__t0, __t2, _MM_SHUFFLE(0, 1, 4, 5));
+//  row1 = (__m256i) _mm256_shuffle_pd(__t1, __t3, _MM_SHUFFLE(0, 1, 4, 5));
+//  row2 = (__m256i) _mm256_shuffle_pd(__t0, __t2, _MM_SHUFFLE(2, 3, 6, 7));
+//  row3 = (__m256i) _mm256_shuffle_pd(__t1, __t3, _MM_SHUFFLE(2, 3, 6, 7));
 }
 
 void sort_columns(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3) {
@@ -114,7 +120,7 @@ void sort_columns(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3) {
   minmax64(row2,row3);
   minmax64(row0,row2);
   minmax64(row1,row3);
-  minmax64(row2,row3);
+  minmax64(row1,row2);
 }
 
 
@@ -148,18 +154,18 @@ void sort_columns(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
     minmax(row3,row4);
 }
 
-inline void sort64(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
+void sort64(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
                    __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7) {
   sort_columns(row0, row1, row2, row3, row4, row5, row6, row7);
   transpose8((__m256 *)&row0, (__m256 *)&row1, (__m256 *)&row2, (__m256 *)&row3,
              (__m256 *)&row4, (__m256 *)&row5, (__m256 *)&row6, (__m256 *)&row7);
 }
 
-inline void sort64(__m256i* row) {
+void sort64(__m256i* row) {
   sort64(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]);
 }
 
-inline void sort16(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3) {
+void sort16(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3) {
   sort_columns(row0, row1, row2, row3);
   transpose4(row0, row1, row2, row3);
 }
