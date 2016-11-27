@@ -5,10 +5,10 @@
 #include <iterator>
 #include "merge_sort.h"
 
-void print_array(int64 *a, const std::string& msg, const int size) {
+void print_array(entry *a, const std::string& msg, const int size) {
   std::cout << msg << std::endl;
   for (int i=0; i<size; i++) {
-    std::cout << a[i] <<  ",";
+    std::cout << "(" << a[i].key << ", " << a[i].oid << ")" <<  ",";
   }
   std::cout << std::endl;
 }
@@ -16,7 +16,8 @@ void print_array(int64 *a, const std::string& msg, const int size) {
 void print_register(const __m256i& a, const std::string& msg) {
   std::cout << msg << std::endl;
   for (int i=0; i<4; i++) {
-    std::cout << ((int64 *) &a)[i] <<  ",";
+    auto ele = (entry *)&a[i];
+    std::cout << "(" << ele->key << "," << ele->oid << ")" <<  ",";
   }
   std::cout << std::endl;
 }
@@ -25,9 +26,9 @@ int get_rand_1000() {
   return ((rand()%2000));
 }
 
-inline bool compare_vec (int a, int b)
+inline bool compare_entry (entry a, entry b)
 {
-  return a<b;
+  return a.key < b.key;
 }
 
 int compare (const void *a, const void *b)
@@ -35,69 +36,82 @@ int compare (const void *a, const void *b)
   return (*(int *)a - *(int *)b);
 }
 
-// void test_minmax64() {
-//   int64_t test_arr1[4] = {11,((int64_t)10<<32)|2,((int64_t)11<<32)|3,4};
-//   int64_t test_arr2[4] = {((int64_t)110<<32)|1,12,13,((int64_t)14<<32)|14};
-//   __m256i test1 = load_reg256((int *)&test_arr1[0]);
-//   __m256i test2 = load_reg256((int *)&test_arr2[0]);
-//   for(int i =0; i < 1000000; i++){
-//     minmax64(test1, test2);
-//   }
-//   print_register(test1, "min64");
-//   print_register(test2, "max64");
-// }
+void generate_rand_entry_array(entry *a, int size) {
+  for (int i=0; i<size; i++) {
+    a[i].key = get_rand_1000();
+    a[i].oid = get_rand_1000();
+  }
+}
 
-// void test_minmax() {
-//   int64_t test_arr1[4] = {11,((int64_t)10<<32)|2,((int64_t)11<<32)|3,4};
-//   int64_t test_arr2[4] = {((int64_t)110<<32)|1,12,13,((int64_t)14<<32)|14};
-//   __m256i test1 = load_reg256((int *)&test_arr1[0]);
-//   __m256i test2 = load_reg256((int *)&test_arr2[0]);
-//   for(int i =0; i < 1000000; i++){
-//     minmax(test1, test2);
-//   }
+void generate_rand_sorted_entry_array(entry *a, int size) {
+  for (int i=0; i<size; i++) {
+    a[i].key = get_rand_1000();
+    a[i].oid = get_rand_1000();
+  }
+  std::sort(a, a+size, compare_entry);
+}
 
-//   print_register(test1, "min");
-//   print_register(test2, "max");
-// }
+// checks if the lower 32 bits of 64-bit elements are sorted
+bool is_key_sorted(entry *a, int size) {
+  for (int i=1; i<size; i++) {
+    if (a[i].key < a[i-1].key) {
+      return false;
+    }
+  }
+  return true;
+}
 
-// void test_sort() {
-//   int odd[8] = {1,5,8,12,17,21,26,37};
-//   int even[8] = {2,3,4,5,10,13,14,80};
-//   __m256i a = load_reg256(&odd[0]);
-//   __m256i b = load_reg256(&even[0]);
-//   auto result = bitonic_merge(a, b);
-//   print_register(result.first, "Upper");
-//   print_register(result.second, "Lower");
-// }
+bool test_sort32_64i() {
+  alignas(32) entry a[8][4];
+  __m256i rows[8];
 
-// // generate a random array of sorted elements
-// void generate_random_sorted_array(int *a, int size=8) {
-//   for (int i=0; i<size; i++) {
-//     a[i] = get_rand_1000();
-//   }
-//   qsort(a, size, sizeof(int), compare);
-// }
+  for(int i = 0; i< 8; i++) {
+    generate_rand_entry_array(a[i], 4);
+    rows[i] = load_reg256((int64 *)&(a[i][0]));
+  }
 
-// void generate_random_array(int *a, int size) {
-//   for(int i=0; i<size; i++) {
-//     a[i] = get_rand_1000();
-//   }
-// }
+  sort32_64i(rows);
 
-// void generate_random_array_withptr(int64_t *a, int size) {
-//   for(int i=0; i<size; i++) {
-//     a[i] = ((int64_t)get_rand_1000() << 32) + get_rand_1000();
-//   }
-// }
+  for(int i = 0; i<8; i++){
+    if (!is_key_sorted((entry *) &rows[i], 4)) {
+      for(int j = 0; j<8; j+=2) {
+        std::cout.width(10);
+        std::cout 
+          << ((int *) &rows[i])[j] 
+          << "|" << ((int *) &rows[i])[j+1] << "\t";
+      }
+      std::cout <<std::endl;
+      return false;
+    }
+  }
+  return true;
+}
 
-// bool is_sorted_register(__m256i a, int *prev) {
-//   for (int i=0; i<8; i++) {
-//     auto curr = ((int *) &a)[i];
-//     if (curr < *prev) return false;
-//     *prev = curr;
-//   }
-//   return true;
-// }
+bool test_bitonic_merge() {
+  alignas(32) entry a[8];
+  entry result[16];
+  __m256i rows[4];
+  for (int i=0; i<2; i++) {
+    generate_rand_sorted_entry_array(a, 8);
+    rows[2*i] = load_reg256((int64 *) &a[0]);
+    rows[2*i+1] = load_reg256((int64 *) &a[4]);
+  }
+
+  bitonic_merge(rows[0], rows[1], rows[2], rows[3]);
+  
+  for (int i=0; i<4; i++) {
+    store_reg256((int64 *) &result[i*4], rows[i]);
+  }
+
+  if (!is_key_sorted(result, 16)) {
+    for (int i=0; i<4; i++)
+      print_register(rows[i], "Register");
+    print_array(result, "Result", 16);
+    return false;
+  }
+
+  return true;
+}
 
 // bool check_bitonic_result(int *a, int *b, 
 //     std::pair<__m256i, __m256i>& result) {
@@ -188,35 +202,7 @@ int compare (const void *a, const void *b)
 //   return true;
 // }
 
-// void test_sort32_64i() {
-//   alignas(128) int64_t a[8][4];
-//   __m256i row[8];
 
-//   for(int i = 0; i< 8; i++) {
-//     generate_random_array_withptr(a[i], 8);
-//     row[i] =  load_reg256(&(a[i][0]));
-//   }
-
-//   for(int i = 0; i<8; i++){
-//     for(int j = 0; j<8; j+=2) {
-//       std::cout.width(10);
-//       std::cout << ((int *) &row[i])[j] << "|" << ((int *) &row[i])[j+1] << "\t";
-//     }
-//     std::cout <<std::endl;
-//   }
-
-//   sort32_64i(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]);
-
-//   std::cout << "Sort64 result\n";
-//   for(int i = 0; i<8; i++){
-//     for(int j = 0; j<8; j+=2) {
-//       std::cout.width(10);
-//       std::cout << ((int *) &row[i])[j] << "|" << ((int *) &row[i])[j+1] << "\t";
-//     }
-//     std::cout <<std::endl;
-//   }
-
-// }
 
 // bool test_sort64() {
 //   int a[8][8];
@@ -377,13 +363,18 @@ int compare (const void *a, const void *b)
 // }
 
 int main() {
-  // int num_iters = 1;
+  int num_iters = 1000;
   // int start = 1<<21, end = 1<<21;
   srand(time(NULL));
 
   initialize();
 
-  test_basic();
+  for (int i=0; i<num_iters; i++) {
+    if (!test_sort32_64i())
+      return 1;
+    if (!test_bitonic_merge())
+      return 1;
+  }
 //  auto start32 = get_time();
 //  test_minmax();
 //  auto end32 = get_time();

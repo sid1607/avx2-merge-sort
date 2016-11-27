@@ -31,44 +31,44 @@ inline void minmax(__m256i& a, __m256i& b) {
   b = _mm256_blendv_epi8(b, t, mask);
 }
 
-inline void transpose8_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
-                           __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7) {
-  __m256i __t0 = _mm256_unpacklo_epi64(row0, row1);
-  __m256i __t1 = _mm256_unpackhi_epi64(row0, row1);
-  __m256i __t2 = _mm256_unpacklo_epi64(row2, row3);
-  __m256i __t3 = _mm256_unpackhi_epi64(row2, row3);
+inline void transpose8_64i(__m256i *rows) {
+  __m256i __t0 = _mm256_unpacklo_epi64(rows[0], rows[1]);
+  __m256i __t1 = _mm256_unpackhi_epi64(rows[0], rows[1]);
+  __m256i __t2 = _mm256_unpacklo_epi64(rows[2], rows[3]);
+  __m256i __t3 = _mm256_unpackhi_epi64(rows[2], rows[3]);
 
-  __m256i __t4 = _mm256_unpacklo_epi64(row4, row5);
-  __m256i __t5 = _mm256_unpackhi_epi64(row4, row5);
-  __m256i __t6 = _mm256_unpacklo_epi64(row6, row7);
-  __m256i __t7 = _mm256_unpackhi_epi64(row6, row7);
+  __m256i __t4 = _mm256_unpacklo_epi64(rows[4], rows[5]);
+  __m256i __t5 = _mm256_unpackhi_epi64(rows[4], rows[5]);
+  __m256i __t6 = _mm256_unpacklo_epi64(rows[6], rows[7]);
+  __m256i __t7 = _mm256_unpackhi_epi64(rows[6], rows[7]);
 
-  row0 = _mm256_permute2x128_si256(__t0, __t2, 0x20);
-  row2 = _mm256_permute2x128_si256(__t1, __t3, 0x20);
-  row4 = _mm256_permute2x128_si256(__t0, __t2, 0x31);
-  row6 = _mm256_permute2x128_si256(__t1, __t3, 0x31);
+  rows[0] = _mm256_permute2x128_si256(__t0, __t2, 0x20);
+  rows[2] = _mm256_permute2x128_si256(__t1, __t3, 0x20);
+  rows[4] = _mm256_permute2x128_si256(__t0, __t2, 0x31);
+  rows[6] = _mm256_permute2x128_si256(__t1, __t3, 0x31);
 
-  row1 = _mm256_permute2x128_si256(__t4, __t6, 0x20);
-  row3 = _mm256_permute2x128_si256(__t5, __t7, 0x20);
-  row5 = _mm256_permute2x128_si256(__t4, __t6, 0x31);
-  row7 = _mm256_permute2x128_si256(__t5, __t7, 0x31);
+  rows[1] = _mm256_permute2x128_si256(__t4, __t6, 0x20);
+  rows[3] = _mm256_permute2x128_si256(__t5, __t7, 0x20);
+  rows[5] = _mm256_permute2x128_si256(__t4, __t6, 0x31);
+  rows[7] = _mm256_permute2x128_si256(__t5, __t7, 0x31);
 
 
 }
 
-inline void transpose4_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3) {
-  __m256i __t0 = _mm256_unpacklo_epi64(row0, row1);
-  __m256i __t1 = _mm256_unpackhi_epi64(row0, row1);
-  __m256i __t2 = _mm256_unpacklo_epi64(row2, row3);
-  __m256i __t3 = _mm256_unpackhi_epi64(row2, row3);
+inline void transpose4_64i(__m256i *rows) {
+  __m256i __t0 = _mm256_unpacklo_epi64(rows[0], rows[1]);
+  __m256i __t1 = _mm256_unpackhi_epi64(rows[0], rows[1]);
+  __m256i __t2 = _mm256_unpacklo_epi64(rows[2], rows[3]);
+  __m256i __t3 = _mm256_unpackhi_epi64(rows[2], rows[3]);
 
-  row0 = _mm256_permute2x128_si256(__t0, __t2, 0x20);
-  row1 = _mm256_permute2x128_si256(__t1, __t3, 0x20);
-  row2 = _mm256_permute2x128_si256(__t0, __t2, 0x31);
-  row3 = _mm256_permute2x128_si256(__t1, __t3, 0x31);
+  rows[0] = _mm256_permute2x128_si256(__t0, __t2, 0x20);
+  rows[1] = _mm256_permute2x128_si256(__t1, __t3, 0x20);
+  rows[2] = _mm256_permute2x128_si256(__t0, __t2, 0x31);
+  rows[3] = _mm256_permute2x128_si256(__t1, __t3, 0x31);
 }
 
-void sort_columns_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3) {
+void sort_columns_64i(__m256i& row0, __m256i& row1, 
+    __m256i& row2, __m256i& row3) {
   minmax(row0,row1);
   minmax(row2,row3);
   minmax(row0,row2);
@@ -76,33 +76,31 @@ void sort_columns_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3
   minmax(row1,row2);
 }
 
-void merge8_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
-                __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7) {
-  minmax(row0, row4);
-  minmax(row1, row5);
-  minmax(row2, row6);
-  minmax(row3, row7);
+void merge8_64i(__m256i *rows) {
+  minmax(rows[0], rows[4]);
+  minmax(rows[1], rows[5]);
+  minmax(rows[2], rows[6]);
+  minmax(rows[3], rows[7]);
 
-  minmax(row2, row4);
-  minmax(row3, row5);
+  minmax(rows[2], rows[4]);
+  minmax(rows[3], rows[5]);
 
-  minmax(row1, row2);
-  minmax(row3, row4);
-  minmax(row5, row6);
+  minmax(rows[1], rows[2]);
+  minmax(rows[3], rows[4]);
+  minmax(rows[5], rows[6]);
 }
 
-void sort16_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3) {
-  sort_columns_64i(row0, row1, row2, row3);
-  transpose4_64i(row0, row1, row2, row3);
+void sort16_64i(__m256i *rows) {
+  sort_columns_64i(rows[0], rows[1], rows[2], rows[3]);
+  transpose4_64i(rows);
 }
 
-void sort32_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
-            __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7) {
-  sort_columns_64i(row0, row1, row2, row3);
-  sort_columns_64i(row4, row5, row6, row7);
+void sort32_64i(__m256i *rows) {
+  sort_columns_64i(rows[0], rows[1], rows[2], rows[3]);
+  sort_columns_64i(rows[4], rows[5], rows[6], rows[7]);
 
-  merge8_64i(row0, row1, row2, row3, row4, row5, row6, row7);
-  transpose8_64i(row0, row1, row2, row3, row4, row5, row6, row7);
+  merge8_64i(rows);
+  transpose8_64i(rows);
 }
 
 // 8-by-8 merge

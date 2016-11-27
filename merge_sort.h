@@ -7,9 +7,14 @@
 #define SIMD_SIZE 4
 #define SORT_SIZE 32
 
-typedef struct masks {
+struct masks {
   __m256i load_store_mask;
-} masks;
+};
+
+struct entry {
+  int32_t key;
+  int32_t oid;
+};
 
 typedef long long int int64;
 
@@ -29,9 +34,8 @@ void minmax(const __m256i& a, const __m256i& b, __m256i& c, __m256i& d);
 
 void minmax(__m256i& a, __m256i& b);
 
-//return  8-element sorted array
-void sort32_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
-            __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7);
+//return 8-element sorted array
+void sort32_64i(__m256i *rows);
 
 void bitonic_merge(__m256i& a, __m256i& b, __m256i& c, __m256i& d);
 
@@ -50,5 +54,5 @@ std::pair<std::vector<int64>, std::vector<int64>>
 
 void print_register(const __m256i& a, const std::string& msg);
 
-void print_array(int *a, const std::string& msg, const int size=4);
+void print_array(entry *a, const std::string& msg, const int size=4);
 
