@@ -59,6 +59,12 @@ void generate_random_array(int *a, int size) {
   }
 }
 
+void generate_random_array_withptr(int64_t *a, int size) {
+  for(int i=0; i<size; i++) {
+    a[i] = ((int64_t)get_rand_1000() << 32) + get_rand_1000();
+  }
+}
+
 bool is_sorted_register(__m256i a, int *prev) {
   for (int i=0; i<8; i++) {
     auto curr = ((int *) &a)[i];
@@ -124,6 +130,67 @@ void test_sort_column() {
       << ((int *) &y6)[i] <<  " " << ((int *) &y7)[i] 
       << std::endl;
   }
+}
+
+bool test_sort16_64i() {
+  int64_t a[4][4];
+  __m256i row[4];
+
+  for(int i = 0; i< 4; i++) {
+    generate_random_array_withptr(a[i], 4);
+    row[i] =  load_reg256(&(a[i][0]));
+  }
+
+  for(int i = 0; i<4; i++){
+    for(int j = 0; j<8; j+=2) {
+      std::cout.width(10);
+      std::cout << ((int *) &row[i])[j] << "|" << ((int *) &row[i])[j+1] << "\t";
+    }
+    std::cout <<std::endl;
+  }
+
+  sort16_64i(row[0], row[1], row[2], row[3]);
+
+  std::cout << "Sort64 result\n";
+  for(int i = 0; i<4; i++){
+    for(int j = 0; j<8; j+=2) {
+      std::cout.width(10);
+      std::cout << ((int *) &row[i])[j] << "|" << ((int *) &row[i])[j+1] << "\t";
+    }
+    std::cout <<std::endl;
+  }
+
+  return true;
+}
+
+void test_sort32_64i() {
+  alignas(128) int64_t a[8][4];
+  __m256i row[8];
+
+  for(int i = 0; i< 8; i++) {
+    generate_random_array_withptr(a[i], 8);
+    row[i] =  load_reg256(&(a[i][0]));
+  }
+
+  for(int i = 0; i<8; i++){
+    for(int j = 0; j<8; j+=2) {
+      std::cout.width(10);
+      std::cout << ((int *) &row[i])[j] << "|" << ((int *) &row[i])[j+1] << "\t";
+    }
+    std::cout <<std::endl;
+  }
+
+  sort32_64i(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]);
+
+  std::cout << "Sort64 result\n";
+  for(int i = 0; i<8; i++){
+    for(int j = 0; j<8; j+=2) {
+      std::cout.width(10);
+      std::cout << ((int *) &row[i])[j] << "|" << ((int *) &row[i])[j+1] << "\t";
+    }
+    std::cout <<std::endl;
+  }
+
 }
 
 bool test_sort64() {
@@ -288,14 +355,27 @@ int main() {
   int num_iters = 1;
   int start = 1<<21, end = 1<<21;
   srand(time(NULL));
+
   initialize();
 
-  for(int i=start; i<=end;i++) {
-    for (int j=0; j<num_iters; j++) {
-      if(!test_merge_sort(i))
-        return 1;
-    }
-    std::cout << "Passed:(" << i << "," << num_iters << ")" << std::endl;
-  }
+//  auto start32 = get_time();
+//  test_minmax();
+//  auto end32 = get_time();
+//  test_minmax64();
+//  auto end64 = get_time();
+//
+//  std::cout << "minmax time:" << end32-start32 << " minmax64 time:"
+//  << end64 - end32 << std::endl;
+
+  test_sort32_64i();
+
+//
+//  for(int i=start; i<=end;i++) {
+//    for (int j=0; j<num_iters; j++) {
+//      if(!test_merge_sort(i))
+//        return 1;
+//    }
+//    std::cout << "Passed:(" << i << "," << num_iters << ")" << std::endl;
+//  }
   return 0;
 }

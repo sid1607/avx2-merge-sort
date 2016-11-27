@@ -16,6 +16,9 @@ extern masks global_masks;
 
 __m256i load_reg256(int *a);
 
+__m256i load_reg256(int64_t
+                    *a);
+
 void store_reg256(int *a, __m256i& b);
 
 __m256i reverse(__m256i& v);
@@ -28,12 +31,22 @@ void minmax(__m256i& a, __m256i& b, __m256i& minab, __m256i& maxab);
 
 void minmax(__m256i& a, __m256i& b);
 
+void minmax64(__m256i& a, __m256i& b);
+
 __m256i register_shuffle(__m256i& a, __m256i& mask);
 
 void sort64(__m256i* row);
 
 void sort64(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
             __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7);
+
+//return  8-element sorted array
+void sort32_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
+            __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7);
+
+void sort16_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3);
+
+
 
 void sort_columns(__m256i& a0, __m256i& a1, __m256i& a2, __m256i& a3,
                   __m256i& a4, __m256i& a5, __m256i& a6, __m256i& a7);
@@ -53,3 +66,6 @@ std::pair<std::vector<int>, std::vector<int>>
 
 std::pair<std::vector<int>, std::vector<int>>
     merge_sort(std::vector<int>& a, std::vector<int>& b);
+
+void test_minmax64();
+void test_minmax();

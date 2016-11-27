@@ -8,6 +8,10 @@ __m256i load_reg256(int *a) {
   return _mm256_maskload_epi32(a, global_masks.load_store_mask);
 }
 
+__m256i load_reg256(int64_t *a) {
+  return _mm256_maskload_epi64(a, global_masks.load_store_mask);
+}
+
 void store_reg256(int *a, __m256i& b) {
   _mm256_maskstore_epi32(a, global_masks.load_store_mask, b);
 }
@@ -35,6 +39,14 @@ inline void minmax(__m256i& a, __m256i& b){
   a = _mm256_min_epu32(a, b);
   b = _mm256_max_epu32(t, b);
   return;
+}
+
+inline void minmax64(__m256i& a, __m256i& b){
+  auto mask = _mm256_cmpgt_epi32 (a, b);
+  mask = _mm256_shuffle_epi32(mask, 0xA0);
+  auto t = a;
+  a = _mm256_blendv_epi8(a, b, mask);
+  b = _mm256_blendv_epi8(b, t, mask);
 }
 
 inline __m256i shuffle(__m256i& a, int* idx_array) {
@@ -85,6 +97,67 @@ inline void transpose8(__m256* row0, __m256* row1, __m256* row2, __m256* row3,
   *row7 = _mm256_permute2f128_ps(__tt3, __tt7, 0x31);
 }
 
+inline void transpose8_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
+                           __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7) {
+  __m256i __t0 = _mm256_unpacklo_epi64(row0, row1);
+  __m256i __t1 = _mm256_unpackhi_epi64(row0, row1);
+  __m256i __t2 = _mm256_unpacklo_epi64(row2, row3);
+  __m256i __t3 = _mm256_unpackhi_epi64(row2, row3);
+
+  __m256i __t4 = _mm256_unpacklo_epi64(row4, row5);
+  __m256i __t5 = _mm256_unpackhi_epi64(row4, row5);
+  __m256i __t6 = _mm256_unpacklo_epi64(row6, row7);
+  __m256i __t7 = _mm256_unpackhi_epi64(row6, row7);
+
+  row0 = (__m256i) _mm256_permute2f128_si256(__t0, __t2, 0x20);
+  row2 = (__m256i) _mm256_permute2f128_si256(__t1, __t3, 0x20);
+  row4 = (__m256i) _mm256_permute2f128_si256(__t0, __t2, 0x31);
+  row6 = (__m256i) _mm256_permute2f128_si256(__t1, __t3, 0x31);
+
+  row1 = (__m256i) _mm256_permute2f128_si256(__t4, __t6, 0x20);
+  row3 = (__m256i) _mm256_permute2f128_si256(__t5, __t7, 0x20);
+  row5 = (__m256i) _mm256_permute2f128_si256(__t4, __t6, 0x31);
+  row7 = (__m256i) _mm256_permute2f128_si256(__t5, __t7, 0x31);
+
+
+}
+
+inline void transpose4_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3) {
+  __m256i __t0 = _mm256_unpacklo_epi64(row0, row1);
+  __m256i __t1 = _mm256_unpackhi_epi64(row0, row1);
+  __m256i __t2 = _mm256_unpacklo_epi64(row2, row3);
+  __m256i __t3 = _mm256_unpackhi_epi64(row2, row3);
+
+  row0 = (__m256i) _mm256_permute2f128_si256(__t0, __t2, 0x20);
+  row1 = (__m256i) _mm256_permute2f128_si256(__t1, __t3, 0x20);
+  row2 = (__m256i) _mm256_permute2f128_si256(__t0, __t2, 0x31);
+  row3 = (__m256i) _mm256_permute2f128_si256(__t1, __t3, 0x31);
+}
+
+void sort_columns_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3) {
+  minmax64(row0,row1);
+  minmax64(row2,row3);
+  minmax64(row0,row2);
+  minmax64(row1,row3);
+  minmax64(row1,row2);
+}
+
+void merge8_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
+                __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7) {
+  minmax64(row0, row4);
+  minmax64(row1, row5);
+  minmax64(row2, row6);
+  minmax64(row3, row7);
+
+  minmax64(row2, row4);
+  minmax64(row3, row5);
+
+  minmax64(row1, row2);
+  minmax64(row3, row4);
+  minmax64(row5, row6);
+}
+
+
 void sort_columns(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
                   __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7) {
 
@@ -115,8 +188,8 @@ void sort_columns(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
     minmax(row3,row4);
 }
 
-inline void sort64(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
-                   __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7) {
+void sort64(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
+            __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7) {
   sort_columns(row0, row1, row2, row3, row4, row5, row6, row7);
   transpose8((__m256 *)&row0, (__m256 *)&row1, (__m256 *)&row2, (__m256 *)&row3,
              (__m256 *)&row4, (__m256 *)&row5, (__m256 *)&row6, (__m256 *)&row7);
@@ -125,6 +198,22 @@ inline void sort64(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
 void sort64(__m256i* row) {
   sort64(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]);
 }
+
+
+void sort16_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3) {
+  sort_columns_64i(row0, row1, row2, row3);
+  transpose4_64i(row0, row1, row2, row3);
+}
+
+void sort32_64i(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
+            __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7) {
+  sort_columns_64i(row0, row1, row2, row3);
+  sort_columns_64i(row4, row5, row6, row7);
+
+  merge8_64i(row0, row1, row2, row3, row4, row5, row6, row7);
+  transpose8_64i(row0, row1, row2, row3, row4, row5, row6, row7);
+}
+
 
 __m256i intra_register_sort(__m256i& l8) {
   __m256i min, max;
@@ -146,7 +235,7 @@ __m256i intra_register_sort(__m256i& l8) {
 
 void initialize() {
   // directly set load store mask in 32B aligned memory
-  alignas(32) int load_store_mask[8] = 
+  alignas(32) int load_store_mask[8] =
     {1<<31,1<<31,1<<31,1<<31,1<<31,1<<31,1<<31,1<<31};
   global_masks.load_store_mask = 
       _mm256_load_si256((__m256i *) &load_store_mask[0]);
@@ -163,6 +252,32 @@ void print_test_array(__m256i res, const std::string& msg) {
   for (int i=0; i<8; i++)
     std::cout << ((int *)&res)[i] << "\t";
   std::cout << std::endl;
+}
+
+
+void test_minmax64() {
+  int64_t test_arr1[4] = {11,((int64_t)10<<32)|2,((int64_t)11<<32)|3,4};
+  int64_t test_arr2[4] = {((int64_t)110<<32)|1,12,13,((int64_t)14<<32)|14};
+  __m256i test1 = load_reg256((int *)&test_arr1[0]);
+  __m256i test2 = load_reg256((int *)&test_arr2[0]);
+  for(int i =0; i < 1000000; i++){
+    minmax64(test1, test2);
+  }
+  print_test_array(test1,"min64");
+  print_test_array(test2,"max64");
+}
+
+void test_minmax() {
+  int64_t test_arr1[4] = {11,((int64_t)10<<32)|2,((int64_t)11<<32)|3,4};
+  int64_t test_arr2[4] = {((int64_t)110<<32)|1,12,13,((int64_t)14<<32)|14};
+  __m256i test1 = load_reg256((int *)&test_arr1[0]);
+  __m256i test2 = load_reg256((int *)&test_arr2[0]);
+  for(int i =0; i < 1000000; i++){
+    minmax(test1, test2);
+  }
+
+  print_test_array(test1,"min");
+  print_test_array(test2,"max");
 }
 
 void test_basic() {
