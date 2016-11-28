@@ -31,6 +31,10 @@ inline bool compare_entry (entry a, entry b)
   return a.key < b.key;
 }
 
+int compare_entry_qsort (const void *a, const void *b) {
+  return (((entry *)a)->key - ((entry *)b)->key);
+}
+
 int compare (const void *a, const void *b) {
   return (*(int *)a - *(int *)b);
 }
@@ -159,6 +163,7 @@ bool test_merge_phase(int size) {
 
 void generate_reference(std::vector<entry>& ref) {
   std::sort(ref.begin(), ref.end(), compare_entry);
+  // qsort(&ref[0], ref.size(), sizeof(entry), compare_entry_qsort); 
 }
 
 bool test_merge(int len) {
@@ -212,7 +217,7 @@ bool test_merge_sort(int len) {
 
 int main() {
   int num_iters = 1;
-  int start = 1<<16, end = (1<<16) + 1;
+  int start = 1<<20, end = (1<<20)+1;
   srand(time(NULL));
 
   initialize();
