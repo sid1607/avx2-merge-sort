@@ -18,9 +18,10 @@ void merge_phase(int64 *a, int64 *out, int start, int mid, int end) {
   auto rc = load_reg256(&a[j]);
   j += SIMD_SIZE;
   auto rd = load_reg256(&a[j]);
+  j += SIMD_SIZE;
 
   // 8-by-8 merge
-  if (mid-start+1 == SIMD_SIZE) {
+  if (mid-start+1 == 2*SIMD_SIZE) {
     bitonic_merge(ra, rb, rc, rd);
     // save the smaller half
     store_reg256(&out[k], ra);
@@ -35,32 +36,35 @@ void merge_phase(int64 *a, int64 *out, int start, int mid, int end) {
     return;
   }
 
-  do {
-    bitonic_merge(ra, rb, rc, rd);
-    
-    // save the smaller half
-    store_reg256(&out[k], ra);
-    k += SIMD_SIZE;
-    store_reg256(&out[k], rb);
-    k += SIMD_SIZE;
-    
-    // use the larger half for the next comparison
-    ra = rc;
-    rb = rd;
+  if (i < i_end && j < j_end) {
+    do {
+      bitonic_merge(ra, rb, rc, rd);
+      
+      // save the smaller half
+      store_reg256(&out[k], ra);
+      k += SIMD_SIZE;
+      store_reg256(&out[k], rb);
+      k += SIMD_SIZE;
+      
+      // use the larger half for the next comparison
+      ra = rc;
+      rb = rd;
 
-    // select the input with the lowest value at the current pointer
-    if (a[i] < a[j]) {
-      rc = load_reg256(&a[i]);
-      i += SIMD_SIZE;
-      rd = load_reg256(&a[i]);
-      i += SIMD_SIZE;
-    } else {
-      rc = load_reg256(&a[j]);
-      j += SIMD_SIZE;
-      rd = load_reg256(&a[j]);
-      j += SIMD_SIZE;
-    }
-  } while (i < i_end && j < j_end);
+      // select the input with the lowest value at the current pointer
+      // use the lower 32-bits for comparison
+      if (*((int *)&a[i]) < *((int *)&a[j])) {
+        rc = load_reg256(&a[i]);
+        i += SIMD_SIZE;
+        rd = load_reg256(&a[i]);
+        i += SIMD_SIZE;
+      } else {
+        rc = load_reg256(&a[j]);
+        j += SIMD_SIZE;
+        rd = load_reg256(&a[j]);
+        j += SIMD_SIZE;
+      }
+    } while (i < i_end && j < j_end);
+  }
 
   // merge the final pair of registers from each input
   bitonic_merge(ra, rb, rc, rd);
@@ -119,26 +123,26 @@ void merge_pass(int64 *in, int64 *out, int n, int merge_size) {
       merge_phase(in, out, i, mid, end);
     } else {
       // copy the leftover data to output
-      std::memcpy(out+i, in+i, (n-i)*sizeof(int));
+      std::memcpy(out+i, in+i, (n-i)*sizeof(int64));
     }
   }
 }
 
 // assume first sort phase has finished
-std::pair<std::vector<int64>, std::vector<int64>> 
-    merge(std::vector<int64>& a, std::vector<int64>& b) {
+std::pair<std::vector<entry>, std::vector<entry>> 
+    merge(std::vector<entry>& a, std::vector<entry>& b) {
   int i=0;
   size_t len = a.size();
   /*
    * even iterations: a->b
    * odd iterations: b->a
    */
-  // start from 16-16 merge
-  for (size_t pass_size=SIMD_SIZE; pass_size<len; pass_size*=2, i++) {
+  // start from 8-8 merge
+  for (size_t pass_size=2*SIMD_SIZE; pass_size<len; pass_size*=2, i++) {
     if (i%2 == 0) {
-      merge_pass(&a[0], &b[0], len, pass_size);
+      merge_pass((int64 *)&a[0], (int64 *)&b[0], len, pass_size);
     } else {
-      merge_pass(&b[0], &a[0], len, pass_size);
+      merge_pass((int64 *)&b[0], (int64 *)&a[0], len, pass_size);
     }
   }
 
@@ -147,15 +151,15 @@ std::pair<std::vector<int64>, std::vector<int64>>
   return std::make_pair(b,a);
 }
 
-std::pair<std::vector<int64>, std::vector<int64>> 
-  merge_sort(std::vector<int64>& a, std::vector<int64>& b) {
+std::pair<std::vector<entry>, std::vector<entry>> 
+  merge_sort(std::vector<entry>& a, std::vector<entry>& b) {
   // __m256i rows[SIMD_SIZE];
   if (a.size()%64!=0) {
     // add padding
     auto i = a.size();
     auto end = ((i+64)/64)*64;
     while (i<end) {
-      a.push_back(INT_MAX);
+      a.emplace_back(INT_MAX, INT_MAX);
       i++;
     }
     // adjust b's size as well

@@ -14,6 +14,10 @@ struct masks {
 struct entry {
   int32_t key;
   int32_t oid;
+
+  entry() {};
+
+  entry(int32_t key, int32_t oid) : key(key), oid(oid) {};
 };
 
 typedef long long int int64;
@@ -47,10 +51,11 @@ void initialize();
 
 void merge_phase(int64 *a, int64 *out, int start, int mid, int end);
 
-void merge_pass(int64 *in, int64 *out, int n, int merge_size);
+std::pair<std::vector<entry>, std::vector<entry>> 
+    merge(std::vector<entry>& a, std::vector<entry>& b);
 
-std::pair<std::vector<int64>, std::vector<int64>> 
-    merge_sort(std::vector<int64>& a, std::vector<int64>& b);
+std::pair<std::vector<entry>, std::vector<entry>> 
+    merge_sort(std::vector<entry>& a, std::vector<entry>& b);
 
 void print_register(const __m256i& a, const std::string& msg);
 
