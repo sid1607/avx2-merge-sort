@@ -46,15 +46,6 @@ inline __m256i register_shuffle(__m256i& a, __m256i& mask) {
   return _mm256_permutevar8x32_epi32(a, mask);
 }
 
-
-std::pair<__m256i, __m256i> bitonic_merge(__m256i& a, __m256i& b) {
-  __m256i minabr, maxabr;
-  __m256i br = reverse(b);
-  minmax(a,br, minabr, maxabr);
-  return std::make_pair(intra_register_sort(minabr), 
-    intra_register_sort(maxabr));
-}
-
 inline void transpose8(__m256* row0, __m256* row1, __m256* row2, __m256* row3,
                        __m256* row4, __m256* row5, __m256* row6, __m256* row7) {
   __m256 __t0, __t1, __t2, __t3, __t4, __t5, __t6, __t7;
@@ -126,12 +117,20 @@ void sort64(__m256i* row) {
   sort64(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]);
 }
 
+std::pair<__m256i, __m256i> bitonic_merge(__m256i& a, __m256i& b) {
+  __m256i minabr, maxabr;
+  __m256i br = reverse(b);
+  minmax(a,br, minabr, maxabr);
+  return std::make_pair(intra_register_sort(minabr), 
+    intra_register_sort(maxabr));
+}
+
 __m256i intra_register_sort(__m256i& l8) {
   __m256i min, max;
   // phase 1
   auto l8_1 = register_shuffle(l8, global_masks.swap_128);
   minmax(l8, l8_1, min, max);
-  auto l4 = _mm256_permute2x128_si256(min, max, 0x20);
+  auto l4 = _mm256_blend_epi32(min, max, 0xf0);
   // phase 2
   auto l4_1 = _mm256_shuffle_epi32(l4, 0x4e);
   minmax(l4, l4_1, min, max);
@@ -139,9 +138,7 @@ __m256i intra_register_sort(__m256i& l8) {
   // phase 3
   auto l2_1 = _mm256_shuffle_epi32(l2, 0xb1);
   minmax(l2, l2_1, min, max);
-  min = _mm256_shuffle_epi32(min, 0xd8);
-  max = _mm256_shuffle_epi32(max, 0xd8);
-  return _mm256_unpacklo_epi32(min, max);
+  return _mm256_blend_epi32(min, max, 0xaa);
 }
 
 void initialize() {
