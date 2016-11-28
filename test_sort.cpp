@@ -31,8 +31,7 @@ inline bool compare_entry (entry a, entry b)
   return a.key < b.key;
 }
 
-int compare (const void *a, const void *b)
-{
+int compare (const void *a, const void *b) {
   return (*(int *)a - *(int *)b);
 }
 
@@ -62,8 +61,8 @@ bool is_key_sorted(entry *a, int size) {
   return true;
 }
 
-bool check_reference(std::vector<entry>& a, std::vector<entry>& ref) {
-  for (size_t i=0; i<a.size(); i++) {
+bool check_reference(std::vector<entry>& a, std::vector<entry>& ref, size_t len) {
+  for (size_t i=0; i<len; i++) {
     if (a[i].key != ref[i].key) {
       std::cout << "a[i]:" << a[i].key << "ref[i]: " << ref[i].key << std::endl;
       return false;
@@ -71,6 +70,26 @@ bool check_reference(std::vector<entry>& a, std::vector<entry>& ref) {
   }
   return true;
 }
+
+//  auto start32 = get_time();
+//  test_minmax();
+//  auto end32 = get_time();
+//  test_minmax64();
+//  auto end64 = get_time();
+//
+//  std::cout << "minmax time:" << end32-start32 << " minmax64 time:"
+//  << end64 - end32 << std::endl;
+
+  // test_sort32_64i();
+
+//
+//  for(int i=start; i<=end;i++) {
+//    for (int j=0; j<num_iters; j++) {
+//      if(!test_merge_sort(i))
+//        return 1;
+//    }
+//    std::cout << "Passed:(" << i << "," << num_iters << ")" << std::endl;
+//  }
 
 
 bool test_sort32_64i() {
@@ -152,7 +171,7 @@ bool test_merge(int len) {
   generate_reference(ref);
   auto res = merge(a, temp);
 
-  if (!check_reference(res.first, ref)) {
+  if (!check_reference(res.first, ref, len)) {
     print_array(&ref[0], "Ref", len);
     print_array(&res.first[0], "Out", len);
     return false;
@@ -160,69 +179,51 @@ bool test_merge(int len) {
   return true;
 }
 
-// inline double get_time() {
-//   return 
-//     static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(
-//       std::chrono::steady_clock::now().time_since_epoch()).count())/1000;
-// }
+inline double get_time() {
+  return 
+    static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(
+      std::chrono::steady_clock::now().time_since_epoch()).count())/1000;
+}
 
-// bool test_merge_sort(int len) {
-//   bool status = true;
-//   std::vector<int> a(len), temp(len), ref(len);
-//   generate_random_array(&a[0], len);
-//   std::copy(&a[0], &a[0]+len, &ref[0]);
+bool test_merge_sort(int len) {
+  bool status = true;
+  std::vector<entry> a(len), temp(len), ref(len);
+  generate_rand_entry_array(&a[0], len);
+  std::copy(&a[0], &a[0]+len, &ref[0]);
 
-//   auto std_start = get_time();
-//   generate_reference(ref);
-//   auto std_end = get_time();
+  auto std_start = get_time();
+  generate_reference(ref);
+  auto std_end = get_time();
 
-//   auto res = merge_sort(a,temp);
-//   auto merge_end = get_time();
-//   // print_array(&res.first[0], "Out", len);
-//   if (is_sorted_array(&res.first[0], &ref[0], len) == false) {
-//       print_array(&ref[0], "Ref", len);
-//       print_array(&res.first[0], "Out", len);
-//       status = false;
-//   } else {
-//     status = true;
-//     std::cout << "std time:" << std_end-std_start << " Merge time:" 
-//       << merge_end - std_end << std::endl;
-//   }
-//   return status;
-// }
+  auto res = merge_sort(a,temp);
+  auto merge_end = get_time();
+  
+  if (!check_reference(res.first, ref, len)) {
+    print_array(&ref[0], "Ref", len);
+    print_array(&res.first[0], "Out", len);
+    status = false;
+  } else {
+    status = true;
+    std::cout << "std time:" << std_end-std_start << " Merge time:" 
+      << merge_end - std_end << std::endl;
+  }
+  return status;
+}
 
 int main() {
-  int num_iters = 100;
-  int end = 1<<10;
+  int num_iters = 1;
+  int start = 1<<16, end = (1<<16) + 1;
   srand(time(NULL));
 
   initialize();
 
-  for (int i=0; i<num_iters; i++) {
-    for (int j=8; j<end; j+=8) {
-      std::cout << j << std::endl;
-      if (!test_merge(8))
+  for (int i=start; i<=end; i++) {
+    std::cout << i << std::endl;
+    for (int j=0; j<num_iters; j++) {
+      if (!test_merge_sort(i))
         return 1;
     }
   }
-//  auto start32 = get_time();
-//  test_minmax();
-//  auto end32 = get_time();
-//  test_minmax64();
-//  auto end64 = get_time();
-//
-//  std::cout << "minmax time:" << end32-start32 << " minmax64 time:"
-//  << end64 - end32 << std::endl;
 
-  // test_sort32_64i();
-
-//
-//  for(int i=start; i<=end;i++) {
-//    for (int j=0; j<num_iters; j++) {
-//      if(!test_merge_sort(i))
-//        return 1;
-//    }
-//    std::cout << "Passed:(" << i << "," << num_iters << ")" << std::endl;
-//  }
   return 0;
 }

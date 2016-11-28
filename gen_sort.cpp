@@ -20,22 +20,6 @@ void merge_phase(int64 *a, int64 *out, int start, int mid, int end) {
   auto rd = load_reg256(&a[j]);
   j += SIMD_SIZE;
 
-  // 8-by-8 merge
-  if (mid-start+1 == 2*SIMD_SIZE) {
-    bitonic_merge(ra, rb, rc, rd);
-    // save the smaller half
-    store_reg256(&out[k], ra);
-    k += SIMD_SIZE;
-    store_reg256(&out[k], rb);
-    k += SIMD_SIZE;
-    // then save the larger half
-    store_reg256(&out[k], rc);
-    k += SIMD_SIZE;
-    store_reg256(&out[k], rd);
-    k += SIMD_SIZE;
-    return;
-  }
-
   if (i < i_end && j < j_end) {
     do {
       bitonic_merge(ra, rb, rc, rd);
@@ -153,11 +137,11 @@ std::pair<std::vector<entry>, std::vector<entry>>
 
 std::pair<std::vector<entry>, std::vector<entry>> 
   merge_sort(std::vector<entry>& a, std::vector<entry>& b) {
-  // __m256i rows[SIMD_SIZE];
-  if (a.size()%64!=0) {
+  __m256i rows[SORT_SIZE/SIMD_SIZE];
+  if (a.size() % SORT_SIZE!=0) {
     // add padding
     auto i = a.size();
-    auto end = ((i+64)/64)*64;
+    auto end = ((i+SORT_SIZE)/SORT_SIZE)*SORT_SIZE;
     while (i<end) {
       a.emplace_back(INT_MAX, INT_MAX);
       i++;
@@ -166,18 +150,18 @@ std::pair<std::vector<entry>, std::vector<entry>>
     b.resize(a.size());
   }
 
-  assert(a.size()%64 == 0);
+  assert(a.size() % SORT_SIZE == 0);
   assert(b.size() == a.size());
 
-  // for (size_t i=0; i < a.size(); i+=SORT_SIZE) {
-  //   for (int j=0; j<SORT_SIZE/SIMD_SIZE; j++) {
-  //     rows[j] = load_reg256(&a[i+j*SIMD_SIZE]);
-  //   }
-  //   // sort64(rows);
-  //   for (int j=0; j<SORT_SIZE/SIMD_SIZE; j++) {
-  //     store_reg256(&a[i+j*SIMD_SIZE], rows[j]);
-  //   }
-  // }
+  for (size_t i=0; i < a.size(); i+=SORT_SIZE) {
+    for (int j=0; j<SORT_SIZE/SIMD_SIZE; j++) {
+      rows[j] = load_reg256((int64 *)&a[i+j*SIMD_SIZE]);
+    }
+    sort32_64i(rows);
+    for (int j=0; j<SORT_SIZE/SIMD_SIZE; j++) {
+      store_reg256((int64 *)&a[i+j*SIMD_SIZE], rows[j]);
+    }
+  }
 
   return merge(a, b);
 }
