@@ -31,7 +31,6 @@ inline __m256i interleave_high(__m256i& a, __m256i& b) {
 inline void minmax(__m256i& a, __m256i& b, __m256i& minab, __m256i& maxab){
     minab = _mm256_min_epu32(a, b);
     maxab = _mm256_max_epu32(a, b);
-    return;
 }
 
 inline void minmax(__m256i& a, __m256i& b){
@@ -47,6 +46,23 @@ inline void minmax64(__m256i& a, __m256i& b){
   auto t = a;
   a = _mm256_blendv_epi8(a, b, mask);
   b = _mm256_blendv_epi8(b, t, mask);
+}
+
+inline void minmax64(__m256i& a, __m256i& b, __m256i& minab, __m256i& maxab){
+  auto mask = _mm256_cmpgt_epi32 (a, b);
+  mask = _mm256_shuffle_epi32(mask, 0xA0);
+  minab = _mm256_blendv_epi8(a, b, mask);
+  maxab = _mm256_blendv_epi8(b, a, mask);
+}
+
+inline void minmax_idx(__m256i& a, __m256i& b, __m256i& aidx, __m256i& bidx,
+                       __m256i& minab, __m256i& maxab, __m256i& minidx, __m256i& maxidx) {
+  auto mask = _mm256_cmpgt_epi32 (a, b);
+  minab = _mm256_blendv_epi8(a, b, mask);
+  maxab = _mm256_blendv_epi8(b, b, mask);
+
+  minidx = _mm256_blendv_epi8(aidx, bidx, mask);
+  maxidx = _mm256_blendv_epi8(bidx, bidx, mask);
 }
 
 inline __m256i shuffle(__m256i& a, int* idx_array) {
@@ -258,27 +274,116 @@ void print_test_array(__m256i res, const std::string& msg) {
 void test_minmax64() {
   int64_t test_arr1[4] = {11,((int64_t)10<<32)|2,((int64_t)11<<32)|3,4};
   int64_t test_arr2[4] = {((int64_t)110<<32)|1,12,13,((int64_t)14<<32)|14};
+  __m256i r1, r2, r3, r4;
   __m256i test1 = load_reg256((int *)&test_arr1[0]);
   __m256i test2 = load_reg256((int *)&test_arr2[0]);
-  for(int i =0; i < 1000000; i++){
-    minmax64(test1, test2);
+  __m256i test3 = load_reg256((int *)&test_arr1[0]);
+  __m256i test4 = load_reg256((int *)&test_arr2[0]);
+  for(int i =0; i < 10000000; i++){
+    minmax64(test1, test2, r1, r2);
+    minmax64(test3, test4, r3, r4);
+    minmax64(test1, test2, r1, r2);
+    minmax64(test3, test4, r3, r4);
+    minmax64(test1, test2, r1, r2);
+    minmax64(test3, test4, r3, r4);
+    minmax64(test1, test2, r1, r2);
+    minmax64(test3, test4, r3, r4);
+
+    minmax64(test1, test2, r1, r2);
+    minmax64(test3, test4, r3, r4);
+    minmax64(test1, test2, r1, r2);
+    minmax64(test3, test4, r3, r4);
+    minmax64(test1, test2, r1, r2);
+    minmax64(test3, test4, r3, r4);
+    minmax64(test1, test2, r1, r2);
+    minmax64(test3, test4, r3, r4);
+
+    minmax64(test1, test2, r1, r2);
+    minmax64(test3, test4, r3, r4);
+    minmax64(test1, test2, r1, r2);
+    minmax64(test3, test4, r3, r4);
+    minmax64(test1, test2, r1, r2);
+    minmax64(test3, test4, r3, r4);
+    minmax64(test1, test2, r1, r2);
+    minmax64(test3, test4, r3, r4);
+
+    minmax64(test1, test2, r1, r2);
+    minmax64(test3, test4, r3, r4);
+    minmax64(test1, test2, r1, r2);
+    minmax64(test3, test4, r3, r4);
+    minmax64(test1, test2, r1, r2);
+    minmax64(test3, test4, r3, r4);
+    minmax64(test1, test2, r1, r2);
+    minmax64(test3, test4, r3, r4);
   }
-  print_test_array(test1,"min64");
-  print_test_array(test2,"max64");
+//  print_test_array(r1,"min64");
+//  print_test_array(r2,"max64");
 }
 
 void test_minmax() {
   int64_t test_arr1[4] = {11,((int64_t)10<<32)|2,((int64_t)11<<32)|3,4};
   int64_t test_arr2[4] = {((int64_t)110<<32)|1,12,13,((int64_t)14<<32)|14};
+  __m256i r1, r2;
   __m256i test1 = load_reg256((int *)&test_arr1[0]);
   __m256i test2 = load_reg256((int *)&test_arr2[0]);
-  for(int i =0; i < 1000000; i++){
-    minmax(test1, test2);
+  for(int i =0; i < 10000000; i++){
+    minmax(test1, test2, r1, r2);
+    minmax(test1, test2, r1, r2);
+    minmax(test1, test2, r1, r2);
+    minmax(test1, test2, r1, r2);
+
+    minmax(test1, test2, r1, r2);
+    minmax(test1, test2, r1, r2);
+    minmax(test1, test2, r1, r2);
+    minmax(test1, test2, r1, r2);
+
+    minmax(test1, test2, r1, r2);
+    minmax(test1, test2, r1, r2);
+    minmax(test1, test2, r1, r2);
+    minmax(test1, test2, r1, r2);
+
+    minmax(test1, test2, r1, r2);
+    minmax(test1, test2, r1, r2);
+    minmax(test1, test2, r1, r2);
+    minmax(test1, test2, r1, r2);
   }
 
-  print_test_array(test1,"min");
-  print_test_array(test2,"max");
+//  print_test_array(r1,"min");
+//  print_test_array(r2,"max");
 }
+
+void test_minmax_idx() {
+  int64_t test_arr1[4] = {11,((int64_t)10<<32)|2,((int64_t)11<<32)|3,4};
+  int64_t test_arr2[4] = {((int64_t)110<<32)|1,12,13,((int64_t)14<<32)|14};
+
+  __m256i r1, r2, r3, r4;
+  __m256i test1 = load_reg256((int *)&test_arr1[0]);
+  __m256i test2 = load_reg256((int *)&test_arr2[0]);
+  __m256i test3 = load_reg256((int *)&test_arr1[0]);
+  __m256i test4 = load_reg256((int *)&test_arr2[0]);
+  for(int i =0; i < 10000000; i++){
+    minmax_idx(test1, test2, test3, test4, r1, r2, r3, r4);
+    minmax_idx(test1, test2, test3, test4, r1, r2, r3, r4);
+    minmax_idx(test1, test2, test3, test4, r1, r2, r3, r4);
+    minmax_idx(test1, test2, test3, test4, r1, r2, r3, r4);
+    minmax_idx(test1, test2, test3, test4, r1, r2, r3, r4);
+    minmax_idx(test1, test2, test3, test4, r1, r2, r3, r4);
+    minmax_idx(test1, test2, test3, test4, r1, r2, r3, r4);
+    minmax_idx(test1, test2, test3, test4, r1, r2, r3, r4);
+    minmax_idx(test1, test2, test3, test4, r1, r2, r3, r4);
+    minmax_idx(test1, test2, test3, test4, r1, r2, r3, r4);
+    minmax_idx(test1, test2, test3, test4, r1, r2, r3, r4);
+    minmax_idx(test1, test2, test3, test4, r1, r2, r3, r4);
+    minmax_idx(test1, test2, test3, test4, r1, r2, r3, r4);
+    minmax_idx(test1, test2, test3, test4, r1, r2, r3, r4);
+    minmax_idx(test1, test2, test3, test4, r1, r2, r3, r4);
+    minmax_idx(test1, test2, test3, test4, r1, r2, r3, r4);
+  }
+
+//  print_test_array(r1,"min");
+//  print_test_array(r2,"max");
+}
+
 
 void test_basic() {
   __m256i min, max;

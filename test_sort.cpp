@@ -348,16 +348,18 @@ int main() {
 
   initialize();
 
-//  auto start32 = get_time();
-//  test_minmax();
-//  auto end32 = get_time();
-//  test_minmax64();
-//  auto end64 = get_time();
-//
-//  std::cout << "minmax time:" << end32-start32 << " minmax64 time:"
-//  << end64 - end32 << std::endl;
+  auto start32 = get_time();
+  test_minmax();
+  auto end32 = get_time();
+  test_minmax64();
+  auto end64 = get_time();
+  test_minmax_idx();
+  auto endidx = get_time();
 
-  test_sort32_64i();
+  std::cout << "minmax time:" << end32-start32 << " minmax64 time:"
+  << end64 - end32 << " minmax_idx time:" << endidx - end64 << std::endl;
+
+  //test_sort32_64i();
 
 //
 //  for(int i=start; i<=end;i++) {

@@ -69,3 +69,4 @@ std::pair<std::vector<int>, std::vector<int>>
 
 void test_minmax64();
 void test_minmax();
+void test_minmax_idx();
