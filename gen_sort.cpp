@@ -97,10 +97,8 @@ void merge_pass(int *in, int *out, int n, int merge_size) {
 }
 
 // assume first sort phase has finished
-std::pair<std::vector<int>, std::vector<int>> 
-    merge(std::vector<int>& a, std::vector<int>& b) {
+std::pair<int *, int *> merge(int *a, int *b, size_t len) {
   int i=0;
-  size_t len = a.size();
   /*
    * even iterations: a->b
    * odd iterations: b->a
@@ -108,9 +106,9 @@ std::pair<std::vector<int>, std::vector<int>>
   // start from 16-16 merge
   for (size_t pass_size=SIMD_SIZE; pass_size<len; pass_size*=2, i++) {
     if (i%2 == 0) {
-      merge_pass(&a[0], &b[0], len, pass_size);
+      merge_pass(a, b, len, pass_size);
     } else {
-      merge_pass(&b[0], &a[0], len, pass_size);
+      merge_pass(b, a, len, pass_size);
     }
   }
 
@@ -119,25 +117,24 @@ std::pair<std::vector<int>, std::vector<int>>
   return std::make_pair(b,a);
 }
 
-std::pair<std::vector<int>, std::vector<int>> 
-  merge_sort(std::vector<int>& a, std::vector<int>& b) {
+std::pair<int *, int *> merge_sort(int *a, int *b, size_t len) {
     __m256i rows[SIMD_SIZE];
-  if (a.size()%64!=0) {
-    // add padding
-    auto i = a.size();
-    auto end = ((i+64)/64)*64;
-    while (i<end) {
-      a.push_back(INT_MAX);
-      i++;
-    }
-    // adjust b's size as well
-    b.resize(a.size());
-  }
+  // if (len%64!=0) {
+  //   // add padding
+  //   auto i = a.size();
+  //   auto end = ((i+64)/64)*64;
+  //   while (i<end) {
+  //     a.push_back(INT_MAX);
+  //     i++;
+  //   }
+  //   // adjust b's size as well
+  //   b.resize(a.size());
+  // }
 
-  assert(a.size()%64 == 0);
-  assert(b.size() == a.size());
+  assert(len%64 == 0);
+  // assert(b.size() == a.size());
 
-  for (size_t i=0; i < a.size(); i+=SORT_SIZE) {
+  for (size_t i=0; i < len; i+=SORT_SIZE) {
     for (int j=0; j<SORT_SIZE/SIMD_SIZE; j++) {
       rows[j] = load_reg256(&a[i+j*SIMD_SIZE]);
     }
@@ -147,5 +144,5 @@ std::pair<std::vector<int>, std::vector<int>>
     }
   }
 
-  return merge(a, b);
+  return merge(a, b, len);
 }

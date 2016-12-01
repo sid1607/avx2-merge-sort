@@ -14,9 +14,13 @@ typedef struct masks {
 
 extern masks global_masks;
 
-__m256i load_reg256(int *a);
+inline __m256i load_reg256(int *a) {
+  return *(__m256i*)a;
+}
 
-void store_reg256(int *a, __m256i& b);
+inline void store_reg256(int *a, __m256i& b) {
+  *((__m256i*)a) = b;
+}
 
 __m256i reverse(__m256i& v);
 
@@ -48,8 +52,6 @@ void merge_phase(int *a, int *out, int start, int mid, int end);
 
 void merge_pass(int *in, int *out, int n, int merge_size);
 
-std::pair<std::vector<int>, std::vector<int>> 
-    merge(std::vector<int>& a, std::vector<int>& b);
+std::pair<int *, int*>  merge(int* a, int* b, size_t len);
 
-std::pair<std::vector<int>, std::vector<int>>
-    merge_sort(std::vector<int>& a, std::vector<int>& b);
+std::pair<int *, int *> merge_sort(int *a, int *b, size_t len);

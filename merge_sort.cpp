@@ -4,14 +4,6 @@
 
 masks global_masks;
 
-__m256i load_reg256(int *a) {
-  return _mm256_maskload_epi32(a, global_masks.load_store_mask);
-}
-
-void store_reg256(int *a, __m256i& b) {
-  _mm256_maskstore_epi32(a, global_masks.load_store_mask, b);
-}
-
 inline __m256i reverse(__m256i& v) {
   return _mm256_permutevar8x32_epi32(v, global_masks.rev_idx_mask);
 }
@@ -30,7 +22,7 @@ inline void minmax(__m256i& a, __m256i& b, __m256i& minab, __m256i& maxab){
   auto mask = _mm256_cmpgt_epi32 (a, b);
   minab = _mm256_blendv_epi8(a, b, mask);
   maxab = _mm256_blendv_epi8(b, a, mask);
-    return;
+  return;
 }
 
 inline void minmax(__m256i& a, __m256i& b){

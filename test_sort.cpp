@@ -235,23 +235,23 @@ void generate_reference(std::vector<int>& ref) {
   std::sort(ref.begin(), ref.end(), compare_vec);
 }
 
-bool test_merge(int len) {
-  bool status;
-  std::vector<int> a(len), temp(len), ref(len);
-  create_merge_array(&a[0], len, 16);
-  std::copy(&a[0], &a[0]+len, &ref[0]);
+// bool test_merge(int len) {
+//   bool status;
+//   std::vector<int> a(len), temp(len), ref(len);
+//   create_merge_array(&a[0], len, 16);
+//   std::copy(&a[0], &a[0]+len, &ref[0]);
 
-  generate_reference(ref);
-  auto res = merge(a, temp);
-  if (is_sorted_array(&res.first[0], &ref[0], len) == false) {
-    print_array(&ref[0], "Ref", len);
-    print_array(&res.first[0], "Out", len);
-    status = false;
-  } else {
-    status = true;
-  }
-  return status;
-}
+//   generate_reference(ref);
+//   auto res = merge(a, temp);
+//   if (is_sorted_array(&res.first[0], &ref[0], len) == false) {
+//     print_array(&ref[0], "Ref", len);
+//     print_array(&res.first[0], "Out", len);
+//     status = false;
+//   } else {
+//     status = true;
+//   }
+//   return status;
+// }
 
 inline double get_time() {
   return 
@@ -261,15 +261,26 @@ inline double get_time() {
 
 bool test_merge_sort(int len) {
   bool status = true;
-  std::vector<int> a(len), temp(len), ref(len);
-  generate_random_array(&a[0], len);
-  std::copy(&a[0], &a[0]+len, &ref[0]);
+  int *a = nullptr, *temp = nullptr;
+
+  // 32-byte aligned allocation
+  if (posix_memalign((void **)&a, 32, len*sizeof(int)) != 0) {
+    throw std::bad_alloc();
+  }
+
+  if (posix_memalign((void **)&temp, 32, len*sizeof(int)) != 0) {
+    throw std::bad_alloc();
+  }
+
+  std::vector<int> ref(len);
+  generate_random_array(a, len);
+  std::copy(a, a+len, &ref[0]);
 
   auto std_start = get_time();
   generate_reference(ref);
   auto std_end = get_time();
 
-  auto res = merge_sort(a,temp);
+  auto res = merge_sort(a, temp, len);
   auto merge_end = get_time();
   // print_array(&res.first[0], "Out", len);
   if (is_sorted_array(&res.first[0], &ref[0], len) == false) {
@@ -281,12 +292,15 @@ bool test_merge_sort(int len) {
     std::cout << "std time:" << std_end-std_start << " Merge time:" 
       << merge_end - std_end << std::endl;
   }
+
+  delete a;
+  delete temp;
   return status;
 }
 
 int main() {
   int num_iters = 1;
-  int start = 1<<21, end = 1<<21;
+  int start = 1<<16, end = 1<<16;
   srand(time(NULL));
   initialize();
 
