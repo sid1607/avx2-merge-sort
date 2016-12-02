@@ -17,11 +17,11 @@ inline __m256i interleave_high(__m256i& a, __m256i& b) {
 }
 
 inline void minmax(__m256i& a, __m256i& b, __m256i& minab, __m256i& maxab){
-//    minab = _mm256_min_epu32(a, b);
-//    maxab = _mm256_max_epu32(a, b);
-  auto mask = _mm256_cmpgt_epi32 (a, b);
-  minab = _mm256_blendv_epi8(a, b, mask);
-  maxab = _mm256_blendv_epi8(b, a, mask);
+  minab = _mm256_min_epi32(a, b);
+  maxab = _mm256_max_epi32(a, b);
+  // auto mask = _mm256_cmpgt_epi32 (a, b);
+  // minab = _mm256_blendv_epi8(a, b, mask);
+  // maxab = _mm256_blendv_epi8(b, a, mask);
   return;
 }
 
@@ -115,11 +115,31 @@ void sort64(__m256i* row) {
 }
 
 std::pair<__m256i, __m256i> bitonic_merge(__m256i& a, __m256i& b) {
-  __m256i minabr, maxabr;
+  __m256i minab, maxab, temp_a, temp_b, ret_a, ret_b;
+  // phase 1 - 8 against 8
   __m256i br = reverse(b);
-  minmax(a,br, minabr, maxabr);
-  return std::make_pair(intra_register_sort(minabr), 
-    intra_register_sort(maxabr));
+  minmax(a,br, minab, maxab);
+  temp_a = _mm256_permute4x64_epi64(minab, 0xd8);
+  temp_b = _mm256_permute4x64_epi64(maxab, 0xd8);
+  ret_a = _mm256_unpacklo_epi32(temp_a, temp_b);
+  ret_b = _mm256_unpackhi_epi32(temp_a, temp_b);
+
+  // phase 2 - 4 against 4
+  minmax(ret_a, ret_b, minab, maxab);
+  ret_a = _mm256_permute2x128_si256(minab, maxab, 0x20);
+  ret_b = _mm256_permute2x128_si256(minab, maxab, 0x31);
+  
+  // phase 3 - 2 against 2
+  minmax(ret_a, ret_b, minab, maxab);
+  ret_a = _mm256_unpacklo_epi32(minab, maxab);
+  ret_b = _mm256_unpackhi_epi32(minab, maxab);
+
+  // phase 4 - 1 against 1 and completion
+  minmax(ret_a, ret_b, minab, maxab);
+  ret_a = _mm256_unpacklo_epi32(minab, maxab);
+  ret_b = _mm256_unpackhi_epi32(minab, maxab);
+
+  return std::make_pair(ret_a, ret_b);
 }
 
 __m256i intra_register_sort(__m256i& l8) {

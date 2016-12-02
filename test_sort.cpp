@@ -300,7 +300,7 @@ bool test_merge_sort(int len) {
 
 int main() {
   int num_iters = 1;
-  int start = 1<<16, end = 1<<16;
+  int start = 1<<24, end = 1<<24;
   srand(time(NULL));
   initialize();
 
