@@ -4,14 +4,6 @@
 
 masks global_masks;
 
-__m256i load_reg256(int64 *a) {
-  return _mm256_maskload_epi64(a, global_masks.load_store_mask);
-}
-
-void store_reg256(int64 *a, __m256i& b) {
-  _mm256_maskstore_epi64(a, global_masks.load_store_mask, b);
-}
-
 inline __m256i reverse(__m256i& v) {
   return _mm256_permute4x64_epi64(v, 0x1b);
 }
@@ -138,10 +130,6 @@ void intra_register_sort(__m256i& a) {
   minmax(a, b, c, d);
   // pick alternate elements from registers
   a = _mm256_blend_epi32(c, d, 0xcc);
-}
-
-void initialize() {
-  global_masks.load_store_mask = _mm256_set1_epi64x((int64)1<<63);
 }
 
 void test_basic() {

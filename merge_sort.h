@@ -24,9 +24,13 @@ typedef long long int int64;
 
 extern masks global_masks;
 
-__m256i load_reg256(int64 *a);
+inline __m256i load_reg256(int64 *a) {
+  return *((__m256i *) a);
+}
 
-void store_reg256(int64 *a, __m256i& b);
+inline void store_reg256(int64 *a, __m256i& b) {
+  *((__m256i*)a = b;
+}
 
 __m256i reverse(__m256i& v);
 
