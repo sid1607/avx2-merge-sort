@@ -1,6 +1,9 @@
 #include "merge_sort.h"
 #include <iostream>
 #include <stdlib.h>
+#include <cassert>
+#include <algorithm>
+#include <cstring>
 
 masks global_masks;
 
@@ -16,19 +19,17 @@ inline __m256i interleave_high(__m256i& a, __m256i& b) {
   return _mm256_unpackhi_epi32(a,b);
 }
 
-inline void minmax(__m256i& a, __m256i& b, __m256i& minab, __m256i& maxab){
+inline void minmax(const __m256i& a, const __m256i& b, 
+    __m256i& minab, __m256i& maxab){
   minab = _mm256_min_epi32(a, b);
   maxab = _mm256_max_epi32(a, b);
-  // auto mask = _mm256_cmpgt_epi32 (a, b);
-  // minab = _mm256_blendv_epi8(a, b, mask);
-  // maxab = _mm256_blendv_epi8(b, a, mask);
   return;
 }
 
 inline void minmax(__m256i& a, __m256i& b){
   auto t = a;
-  a = _mm256_min_epu32(a, b);
-  b = _mm256_max_epu32(t, b);
+  a = _mm256_min_epi32(a, b);
+  b = _mm256_max_epi32(t, b);
   return;
 }
 
@@ -37,7 +38,7 @@ inline __m256i shuffle(__m256i& a, int* idx_array) {
   return _mm256_permutevar8x32_epi32(a, idx);
 }
 
-inline __m256i register_shuffle(__m256i& a, __m256i& mask) {
+inline __m256i register_shuffle(const __m256i& a, const __m256i& mask) {
   return _mm256_permutevar8x32_epi32(a, mask);
 }
 
@@ -73,7 +74,7 @@ inline void transpose8(__m256* row0, __m256* row1, __m256* row2, __m256* row3,
   *row7 = _mm256_permute2f128_ps(__tt3, __tt7, 0x31);
 }
 
-void sort_columns(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
+inline void sort_columns(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
                   __m256i& row4, __m256i& row5, __m256i& row6, __m256i& row7) {
 
     minmax(row0,row1);
@@ -110,52 +111,47 @@ inline void sort64(__m256i& row0, __m256i& row1, __m256i& row2, __m256i& row3,
              (__m256 *)&row4, (__m256 *)&row5, (__m256 *)&row6, (__m256 *)&row7);
 }
 
-void sort64(__m256i* row) {
+inline void sort64(__m256i* row) {
   sort64(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]);
 }
 
-std::pair<__m256i, __m256i> bitonic_merge(__m256i& a, __m256i& b) {
-  __m256i minab, maxab, temp_a, temp_b, ret_a, ret_b;
+inline void bitonic_merge(__m256i& a, __m256i& b) {
   // phase 1 - 8 against 8
-  __m256i br = reverse(b);
-  minmax(a,br, minab, maxab);
-  temp_a = _mm256_permute4x64_epi64(minab, 0xd8);
-  temp_b = _mm256_permute4x64_epi64(maxab, 0xd8);
-  ret_a = _mm256_unpacklo_epi32(temp_a, temp_b);
-  ret_b = _mm256_unpackhi_epi32(temp_a, temp_b);
-
-  // phase 2 - 4 against 4
-  minmax(ret_a, ret_b, minab, maxab);
-  ret_a = _mm256_permute2x128_si256(minab, maxab, 0x20);
-  ret_b = _mm256_permute2x128_si256(minab, maxab, 0x31);
-  
-  // phase 3 - 2 against 2
-  minmax(ret_a, ret_b, minab, maxab);
-  ret_a = _mm256_unpacklo_epi32(minab, maxab);
-  ret_b = _mm256_unpackhi_epi32(minab, maxab);
-
-  // phase 4 - 1 against 1 and completion
-  minmax(ret_a, ret_b, minab, maxab);
-  ret_a = _mm256_unpacklo_epi32(minab, maxab);
-  ret_b = _mm256_unpackhi_epi32(minab, maxab);
-
-  return std::make_pair(ret_a, ret_b);
+  b = reverse(b);
+  minmax(a,b);
+  intra_register_sort(a,b);
 }
 
-__m256i intra_register_sort(__m256i& l8) {
-  __m256i min, max;
+inline void intra_register_sort(__m256i& a8, __m256i& b8) {
+  __m256i mina, maxa, minb, maxb;
   // phase 1
-  auto l8_1 = register_shuffle(l8, global_masks.swap_128);
-  minmax(l8, l8_1, min, max);
-  auto l4 = _mm256_blend_epi32(min, max, 0xf0);
+  auto a8_1 = register_shuffle(a8, global_masks.swap_128);
+  auto b8_1 = register_shuffle(b8, global_masks.swap_128);
+
+  minmax(a8, a8_1, mina, maxa);
+  minmax(b8, b8_1, minb, maxb);
+
+  auto a4 = _mm256_blend_epi32(mina, maxa, 0xf0);
+  auto b4 = _mm256_blend_epi32(minb, maxb, 0xf0);
+
   // phase 2
-  auto l4_1 = _mm256_shuffle_epi32(l4, 0x4e);
-  minmax(l4, l4_1, min, max);
-  auto l2 = _mm256_unpacklo_epi64(min, max);
+  auto a4_1 = _mm256_shuffle_epi32(a4, 0x4e);
+  auto b4_1 = _mm256_shuffle_epi32(b4, 0x4e);
+
+  minmax(a4, a4_1, mina, maxa);
+  minmax(b4, b4_1, minb, maxb);
+
+  auto a2 = _mm256_unpacklo_epi64(mina, maxa);
+  auto b2 = _mm256_unpacklo_epi64(minb, maxb);
   // phase 3
-  auto l2_1 = _mm256_shuffle_epi32(l2, 0xb1);
-  minmax(l2, l2_1, min, max);
-  return _mm256_blend_epi32(min, max, 0xaa);
+  auto a2_1 = _mm256_shuffle_epi32(a2, 0xb1);
+  auto b2_1 = _mm256_shuffle_epi32(b2, 0xb1);
+
+  minmax(a2, a2_1, mina, maxa);
+  minmax(b2, b2_1, minb, maxb);
+
+  a8 = _mm256_blend_epi32(mina, maxa, 0xaa);
+  b8 = _mm256_blend_epi32(minb, maxb, 0xaa);
 }
 
 void initialize() {
@@ -172,28 +168,169 @@ void initialize() {
   global_masks.swap_128 = load_reg256(&swap_128[0]);
 }
 
-void print_test_array(__m256i res, const std::string& msg) {
-  std::cout << msg << std::endl;
-  for (int i=0; i<8; i++)
-    std::cout << ((int *)&res)[i] << "\t";
-  std::cout << std::endl;
+void merge_phase(int *a, int *out, int start, int mid, int end) {
+  int i=start, j=mid+1, k=start;
+  int i_end = i + mid - start + 1;
+  int j_end = j + end - mid;
+
+  auto ra = load_reg256(&a[i]);
+  auto rb = load_reg256(&a[j]);
+
+  i += SIMD_SIZE;
+  j += SIMD_SIZE;
+
+  // 8-by-8 merge
+  if (mid-start+1 == SIMD_SIZE) {
+    bitonic_merge(ra, rb);
+    // save the smaller half
+    store_reg256(&out[k], ra);
+    k += SIMD_SIZE;
+    // then save the larger half
+    store_reg256(&out[k], rb);
+    k += SIMD_SIZE;
+    return;
+  }
+
+  do {
+    bitonic_merge(ra, rb);
+    
+    // save the smaller half
+    store_reg256(&out[k], ra);
+    k += SIMD_SIZE;
+    
+    // use the larger half for the next comparison
+    ra = rb;
+
+    // select the input with the lowest value at the current pointer
+    if (a[i] < a[j]) {
+      rb = load_reg256(&a[i]);
+      i += SIMD_SIZE;
+    } else {
+      rb = load_reg256(&a[j]);
+      j += SIMD_SIZE;
+    }
+  } while (i < i_end && j < j_end);
+
+  // merge the final pair of registers from each input
+  bitonic_merge(ra, rb);
+  store_reg256(&out[k], ra);
+  k += SIMD_SIZE;
+  ra = rb;
+
+  // consume remaining data from a, if left
+  while (i < i_end) {
+    rb = load_reg256(&a[i]);
+    i += SIMD_SIZE;
+    bitonic_merge(ra, rb);
+    store_reg256(&out[k], ra);
+    k += SIMD_SIZE;
+    ra = rb;
+  }
+
+  // consume remaining data from b, if left
+  while (j < j_end) {
+    rb = load_reg256(&a[j]);
+    j += SIMD_SIZE;
+    bitonic_merge(ra, rb);
+    store_reg256(&out[k], ra);
+    k += SIMD_SIZE;
+    ra = rb;
+  }
+
+  // store the final batch
+  store_reg256(&out[k], ra);
+  k += SIMD_SIZE;
 }
 
-void test_basic() {
-  __m256i min, max;
-  int test_arr1[8] = {1,2,3,4,15,16,17,18};
-  int test_arr2[8] = {11,12,13,14,5,6,7,8};
-  int idx[8] = {4,5,6,7,0,1,2,3};
-  __m256i test1 = load_reg256(&test_arr1[0]);
-  __m256i test2 = load_reg256(&test_arr2[0]);
-  __m256i mask = load_reg256(&idx[0]);
-  print_test_array(test1, "test1");
-  print_test_array(test2, "test2");
-  print_test_array(reverse(test1), "Reverse Output");
-  print_test_array(register_shuffle(test1, mask), "Register shuffle");
-  print_test_array(interleave_low(test1, test2), "interleave_low");
-  print_test_array(interleave_high(test1, test2), "interleave_high");
-  minmax(test1, test2, min, max);
-  print_test_array(min, "Minimum");
-  print_test_array(max, "Maximum");
+// minimum merge_size=16, minimum n=2*merge_size
+void merge_pass(int *in, int *out, int n, int merge_size) {
+  for (int i=0; i < n-1; i+=2*merge_size) {
+    auto mid = i + merge_size - 1;
+    auto end = std::min(i+2*merge_size-1, n-1);
+    // check if there are 2 sub-arrays to merge
+    if (mid < end) {
+      // merge two merge_size arrays per iteration
+      merge_phase(in, out, i, mid, end);
+    } else {
+      // copy the leftover data to output
+      std::memcpy(out+i, in+i, (n-i)*sizeof(int));
+    }
+  }
 }
+
+// assume first sort phase has finished
+std::pair<int *, int *> merge(int *a, int *b, size_t len) {
+  int i=0;
+  /*
+   * even iterations: a->b
+   * odd iterations: b->a
+   */
+  // start from 16-16 merge
+  for (size_t pass_size=SIMD_SIZE; pass_size<len; pass_size*=2, i++) {
+    if (i%2 == 0) {
+      merge_pass(a, b, len, pass_size);
+    } else {
+      merge_pass(b, a, len, pass_size);
+    }
+  }
+
+  if (i%2 == 0)
+    return std::make_pair(a,b);
+  return std::make_pair(b,a);
+}
+
+std::pair<int *, int *> merge_sort(int *a, int *b, size_t len) {
+    __m256i rows[SIMD_SIZE];
+  // if (len%64!=0) {
+  //   // add padding
+  //   auto i = a.size();
+  //   auto end = ((i+64)/64)*64;
+  //   while (i<end) {
+  //     a.push_back(INT_MAX);
+  //     i++;
+  //   }
+  //   // adjust b's size as well
+  //   b.resize(a.size());
+  // }
+
+  assert(len%64 == 0);
+  // assert(b.size() == a.size());
+
+  for (size_t i=0; i < len; i+=SORT_SIZE) {
+    for (int j=0; j<SORT_SIZE/SIMD_SIZE; j++) {
+      rows[j] = load_reg256(&a[i+j*SIMD_SIZE]);
+    }
+    sort64(rows);
+    for (int j=0; j<SORT_SIZE/SIMD_SIZE; j++) {
+      store_reg256(&a[i+j*SIMD_SIZE], rows[j]);
+    }
+  }
+
+  return merge(a, b, len);
+}
+
+// void print_test_array(__m256i res, const std::string& msg) {
+//   std::cout << msg << std::endl;
+//   for (int i=0; i<8; i++)
+//     std::cout << ((int *)&res)[i] << "\t";
+//   std::cout << std::endl;
+// }
+
+// void test_basic() {
+//   __m256i min, max;
+//   int test_arr1[8] = {1,2,3,4,15,16,17,18};
+//   int test_arr2[8] = {11,12,13,14,5,6,7,8};
+//   int idx[8] = {4,5,6,7,0,1,2,3};
+//   __m256i test1 = load_reg256(&test_arr1[0]);
+//   __m256i test2 = load_reg256(&test_arr2[0]);
+//   __m256i mask = load_reg256(&idx[0]);
+//   print_test_array(test1, "test1");
+//   print_test_array(test2, "test2");
+//   print_test_array(reverse(test1), "Reverse Output");
+//   print_test_array(register_shuffle(test1, mask), "Register shuffle");
+//   print_test_array(interleave_low(test1, test2), "interleave_low");
+//   print_test_array(interleave_high(test1, test2), "interleave_high");
+//   minmax(test1, test2, min, max);
+//   print_test_array(min, "Minimum");
+//   print_test_array(max, "Maximum");
+// }
