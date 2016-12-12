@@ -65,7 +65,7 @@ bool is_key_sorted(entry *a, int size) {
   return true;
 }
 
-bool check_reference(std::vector<entry>& a, std::vector<entry>& ref, size_t len) {
+bool check_reference(entry *a, std::vector<entry>& ref, size_t len) {
   for (size_t i=0; i<len; i++) {
     if (a[i].key != ref[i].key) {
       std::cout << "a[i]:" << a[i].key << "ref[i]: " << ref[i].key << std::endl;
@@ -96,93 +96,93 @@ bool check_reference(std::vector<entry>& a, std::vector<entry>& ref, size_t len)
 //  }
 
 
-bool test_sort32_64i() {
-  alignas(32) entry a[8][4];
-  entry result[32];
-  __m256i rows[8];
+// bool test_sort32_64i() {
+//   alignas(32) entry a[8][4];
+//   entry result[32];
+//   __m256i rows[8];
 
-  for(int i = 0; i< 8; i++) {
-    generate_rand_entry_array(a[i], 4);
-    rows[i] = load_reg256((int64 *)&(a[i][0]));
-  }
+//   for(int i = 0; i< 8; i++) {
+//     generate_rand_entry_array(a[i], 4);
+//     rows[i] = load_reg256((sort_ele_type *)&(a[i][0]));
+//   }
 
-  sort32_64i(rows);
+//   sort32_64i(rows);
 
-  for (int i=0; i<8; i++) {
-    store_reg256((int64 *)&result[i*4], rows[i]);
-  }
+//   for (int i=0; i<8; i++) {
+//     store_reg256((sort_ele_type *)&result[i*4], rows[i]);
+//   }
 
-  for(int i = 0; i<4; i++){
-    if (!is_key_sorted((entry *) &result[i*8], 8)) {
-      print_array(&result[i*8], "ResultRow", 8);
-      return false;
-    }
-  }
-  return true;
-}
+//   for(int i = 0; i<4; i++){
+//     if (!is_key_sorted((entry *) &result[i*8], 8)) {
+//       print_array(&result[i*8], "ResultRow", 8);
+//       return false;
+//     }
+//   }
+//   return true;
+// }
 
-bool test_bitonic_merge() {
-  alignas(32) entry a[8];
-  entry result[16];
-  __m256i rows[4];
-  for (int i=0; i<2; i++) {
-    generate_rand_sorted_entry_array(a, 8);
-    rows[2*i] = load_reg256((int64 *) &a[0]);
-    rows[2*i+1] = load_reg256((int64 *) &a[4]);
-  }
+// bool test_bitonic_merge() {
+//   alignas(32) entry a[8];
+//   entry result[16];
+//   __m256i rows[4];
+//   for (int i=0; i<2; i++) {
+//     generate_rand_sorted_entry_array(a, 8);
+//     rows[2*i] = load_reg256((sort_ele_type *) &a[0]);
+//     rows[2*i+1] = load_reg256((sort_ele_type *) &a[4]);
+//   }
 
-  bitonic_merge(rows[0], rows[1], rows[2], rows[3]);
+//   bitonic_merge(rows[0], rows[1], rows[2], rows[3]);
   
-  for (int i=0; i<4; i++) {
-    store_reg256((int64 *) &result[i*4], rows[i]);
-  }
+//   for (int i=0; i<4; i++) {
+//     store_reg256((sort_ele_type *) &result[i*4], rows[i]);
+//   }
 
-  if (!is_key_sorted(result, 16)) {
-    for (int i=0; i<4; i++)
-      print_register(rows[i], "Register");
-    print_array(result, "Result", 16);
-    return false;
-  }
+//   if (!is_key_sorted(result, 16)) {
+//     for (int i=0; i<4; i++)
+//       print_register(rows[i], "Register");
+//     print_array(result, "Result", 16);
+//     return false;
+//   }
 
-  return true;
-}
+//   return true;
+// }
 
-bool test_merge_phase(int size) {
-  alignas(32) std::vector<entry> a(2*size), res(2*size);
-  generate_rand_sorted_entry_array(&a[0], size);
-  generate_rand_sorted_entry_array(&a[size], size);
-  merge_phase((int64 *)&a[0], (int64 *)&res[0], 0, size-1, 2*size-1);
-  if (!is_key_sorted(&res[0], 2*size)) {
-    print_array(&a[0], "A", size);
-    print_array(&a[size], "B", size);
-    print_array(&res[0], "Result", 2*size);
-    return false;
-  }
-  return true;
-}
+// bool test_merge_phase(int size) {
+//   alignas(32) std::vector<entry> a(2*size), res(2*size);
+//   generate_rand_sorted_entry_array(&a[0], size);
+//   generate_rand_sorted_entry_array(&a[size], size);
+//   merge_phase((sort_ele_type *)&a[0], (sort_ele_type *)&res[0], 0, size-1, 2*size-1);
+//   if (!is_key_sorted(&res[0], 2*size)) {
+//     print_array(&a[0], "A", size);
+//     print_array(&a[size], "B", size);
+//     print_array(&res[0], "Result", 2*size);
+//     return false;
+//   }
+//   return true;
+// }
 
 void generate_reference(std::vector<entry>& ref) {
   std::sort(ref.begin(), ref.end(), compare_entry);
   // qsort(&ref[0], ref.size(), sizeof(entry), compare_entry_qsort); 
 }
 
-bool test_merge(int len) {
-  std::vector<entry> a(len), temp(len), ref(len);
-  for (int i=0; i<len; i+=8) {
-    generate_rand_sorted_entry_array(&a[i], 8);
-  }
-  // print_array(&a[0], "A", len);
-  std::copy(&a[0], &a[0]+len, &ref[0]);
-  generate_reference(ref);
-  auto res = merge(a, temp);
+// bool test_merge(int len) {
+//   std::vector<entry> a(len), temp(len), ref(len);
+//   for (int i=0; i<len; i+=8) {
+//     generate_rand_sorted_entry_array(&a[i], 8);
+//   }
+//   // print_array(&a[0], "A", len);
+//   std::copy(&a[0], &a[0]+len, &ref[0]);
+//   generate_reference(ref);
+//   auto res = merge(a, temp);
 
-  if (!check_reference(res.first, ref, len)) {
-    print_array(&ref[0], "Ref", len);
-    print_array(&res.first[0], "Out", len);
-    return false;
-  }
-  return true;
-}
+//   if (!check_reference(res.first, ref, len)) {
+//     print_array(&ref[0], "Ref", len);
+//     print_array(&res.first[0], "Out", len);
+//     return false;
+//   }
+//   return true;
+// }
 
 inline double get_time() {
   return 
@@ -192,43 +192,60 @@ inline double get_time() {
 
 bool test_merge_sort(int len) {
   bool status = true;
-  std::vector<entry> a(len), temp(len), ref(len);
-  generate_rand_entry_array(&a[0], len);
-  std::copy(&a[0], &a[0]+len, &ref[0]);
+  entry *a = nullptr, *temp = nullptr;
+
+  // 32-byte aligned allocation
+  if (posix_memalign((void **)&a, 32, len*sizeof(entry)) != 0) {
+    throw std::bad_alloc();
+  }
+
+  if (posix_memalign((void **)&temp, 32, len*sizeof(entry)) != 0) {
+    throw std::bad_alloc();
+  }
+
+  std::vector<entry> ref(len);
+  generate_rand_entry_array(a, len);
+  std::copy(a, a+len, &ref[0]);
 
   auto std_start = get_time();
   generate_reference(ref);
   auto std_end = get_time();
 
-  auto res = merge_sort(a,temp);
+  auto res = merge_sort((sort_ele_type*)a, (sort_ele_type*)temp, len);
   auto merge_end = get_time();
   
-  if (!check_reference(res.first, ref, len)) {
+  if (!check_reference((entry*)res.first, ref, len)) {
     print_array(&ref[0], "Ref", len);
-    print_array(&res.first[0], "Out", len);
+    print_array((entry*)res.first, "Out", len);
     status = false;
   } else {
     status = true;
-    std::cout << "std time:" << std_end-std_start << " Merge time:" 
+    std::cout << "std time: " << std_end-std_start << "\nMerge time:" 
       << merge_end - std_end << std::endl;
   }
   return status;
 }
 
-int main() {
-  int num_iters = 1;
-  int start = 1<<20, end = (1<<20)+1;
+int main(int argc, char *argv[]) {
+  int num_iters = 1, pow_2 = 24;
+  int start, end;
   srand(time(NULL));
 
-  initialize();
-
-  for (int i=start; i<=end; i++) {
-    std::cout << i << std::endl;
-    for (int j=0; j<num_iters; j++) {
-      if (!test_merge_sort(i))
-        return 1;
-    }
+  if (argc==2) {
+    pow_2 = atoi(argv[1]);
+  } else {
+    pow_2 = 24;
   }
 
+  start = 1 << pow_2;
+  end = 1 << pow_2;
+
+  for(int i=start; i<=end;i++) {
+    for (int j=0; j<num_iters; j++) {
+      if(!test_merge_sort(i))
+        return 1;
+    }
+    std::cout << "Passed:( " << i << " ," << num_iters << ")" << std::endl;
+  }
   return 0;
 }
